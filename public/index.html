@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#ef4444">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="חדשות LIVE">
+<link rel="manifest" href="/manifest.json">
+<title>חדשות ישראל LIVE 🇮🇱</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:'Segoe UI','Arial Hebrew',Arial,sans-serif;background:#06090f;color:#f1f5f9;max-width:480px;margin:0 auto;padding-bottom:68px;min-height:100vh}
+::-webkit-scrollbar{width:0;height:0}
+#header{background:linear-gradient(180deg,#1a0505 0%,#0d0d18 100%);border-bottom:2px solid rgba(239,68,68,0.6);padding:12px 14px 0;position:sticky;top:0;z-index:50}
+.hrow{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.logo{display:flex;align-items:center;gap:7px}
+.live-badge{background:#ef4444;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:900;color:#fff;animation:blink 1s infinite}
+#clock-time{font-size:20px;font-weight:900;color:#fbbf24;font-variant-numeric:tabular-nums}
+#clock-date{font-size:10px;color:#475569}
+.ticker{background:rgba(0,0,0,0.5);margin:0 -14px;padding:6px 14px;display:flex;align-items:center;gap:8px;border-top:1px solid rgba(239,68,68,0.2)}
+.tlabel{background:#ef4444;font-size:9px;font-weight:900;padding:2px 6px;border-radius:3px;color:#fff;white-space:nowrap;animation:blink 1s infinite}
+#ticker-text{flex:1;font-size:12px;color:#fcd34d;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.tabs{display:flex}
+.tab-btn{flex:1;padding:9px 0;border:none;cursor:pointer;background:transparent;font-size:12px;font-weight:500;color:#64748b;border-bottom:2px solid transparent;transition:all 0.15s;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:4px}
+.tab-btn.active{font-weight:800;color:#f87171;border-bottom-color:#ef4444}
+.panel{display:none}.panel.active{display:block}
+#status-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:rgba(239,68,68,0.07);border-bottom:1px solid rgba(239,68,68,0.15)}
+#status-text{font-size:11px;color:#f87171;font-weight:600;flex:1;margin-left:8px}
+#refresh-btn{padding:5px 14px;border-radius:20px;background:#ef4444;border:none;color:#fff;font-size:12px;cursor:pointer;font-weight:800;font-family:inherit;white-space:nowrap}
+#install-banner{display:none;background:linear-gradient(90deg,rgba(59,130,246,0.2),rgba(37,99,235,0.15));border-bottom:1px solid rgba(59,130,246,0.3);padding:10px 14px;align-items:center;gap:10px}
+#install-banner.show{display:flex}
+.install-btn{padding:6px 14px;border-radius:14px;background:#3b82f6;border:none;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:inherit}
+.src-scroll{display:flex;gap:6px;padding:8px 14px;overflow-x:auto;scrollbar-width:none}
+.src-btn{padding:5px 11px;border-radius:14px;border:1px solid rgba(255,255,255,0.1);cursor:pointer;background:rgba(255,255,255,0.05);color:#94a3b8;font-size:11px;white-space:nowrap;flex-shrink:0;font-family:inherit}
+#news-list{padding:0 12px}
+.news-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:12px;padding:13px 13px 13px 16px;margin-bottom:9px;position:relative;overflow:hidden;cursor:pointer;text-decoration:none;display:block;color:inherit}
+.news-stripe{position:absolute;top:0;right:0;bottom:0;width:4px;border-radius:0 12px 12px 0}
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:6px}
+.src-label{font-size:11px;font-weight:700;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.time-label{font-size:10px;color:#64748b;white-space:nowrap}
+.news-title{font-size:14px;font-weight:600;line-height:1.55;color:#e2e8f0}
+.news-desc{font-size:12px;color:#64748b;line-height:1.4;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.empty-box{text-align:center;padding:40px 20px;color:#64748b}
+.alerts-wrap{padding:14px}
+#alert-box{border-radius:16px;padding:20px;margin-bottom:14px;text-align:center;border:2px solid #22c55e;background:rgba(34,197,94,0.07);transition:all 0.3s}
+#alert-box.danger{background:linear-gradient(135deg,rgba(127,29,29,0.65),rgba(153,27,27,0.4));border-color:#ef4444;animation:pulseAlert 1s infinite}
+#alert-emoji{font-size:46px}
+#alert-status{font-size:18px;font-weight:900;margin-top:6px}
+#alert-areas{font-size:14px;color:#fecaca;margin-top:8px;line-height:1.8}
+.alert-sub{font-size:11px;color:#64748b;margin-top:8px}
+.safety-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.safety-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:11px;padding:12px;text-align:center}
+.hist-title{font-size:12px;font-weight:700;color:#64748b;margin-bottom:8px}
+.hist-card{background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.07);border-radius:10px;padding:10px 14px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center}
+#alert-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.88);align-items:center;justify-content:center}
+#alert-overlay.show{display:flex}
+.alert-modal{background:linear-gradient(135deg,#7f1d1d,#991b1b);border:3px solid #ef4444;border-radius:20px;padding:30px 26px;text-align:center;width:88%;max-width:340px;box-shadow:0 0 60px rgba(239,68,68,0.65);animation:pulseAlert 1s infinite}
+.alert-close{margin-top:18px;padding:9px 26px;border-radius:30px;border:2px solid #ef4444;background:transparent;color:#fca5a5;font-size:14px;cursor:pointer;font-weight:700;font-family:inherit}
+#bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;background:rgba(6,9,15,0.98);border-top:1px solid rgba(255,255,255,0.08);display:flex}
+.nav-btn{flex:1;padding:10px 0;border:none;cursor:pointer;background:transparent;font-size:10px;font-weight:500;color:#475569;display:flex;flex-direction:column;align-items:center;gap:3px;font-family:inherit;position:relative}
+.nav-btn.active{color:#f87171;font-weight:800}
+.nav-icon{font-size:20px}
+.nav-dot{position:absolute;top:7px;right:calc(50% - 14px);width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 5px #22c55e}
+.nav-dot.red{background:#ef4444;box-shadow:0 0 5px #ef4444;animation:blink 0.8s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+@keyframes pulseAlert{0%,100%{box-shadow:0 0 30px rgba(239,68,68,0.45)}50%{box-shadow:0 0 65px rgba(239,68,68,0.85)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;animation:spin 0.8s linear infinite}
+</style>
+</head>
+<body>
+<div id="alert-overlay">
+  <div class="alert-modal">
+    <div style="font-size:60px">🚨</div>
+    <div style="font-size:26px;font-weight:900;color:#fca5a5;margin-top:6px">אזעקה!</div>
+    <div id="overlay-type" style="font-size:17px;font-weight:700;color:#fff;margin-top:4px"></div>
+    <div id="overlay-areas" style="font-size:15px;color:#fecaca;margin-top:10px;line-height:1.8"></div>
+    <div style="margin-top:14px;font-size:13px;color:#f87171;font-weight:700">היכנסו למרחב מוגן מיידית!</div>
+    <button class="alert-close" onclick="document.getElementById('alert-overlay').classList.remove('show')">הבנתי</button>
+  </div>
+</div>
+<div id="install-banner">
+  <div style="flex:1"><div style="font-size:13px;font-weight:700;color:#93c5fd">📲 התקן כאפליקציה</div><div style="font-size:11px;color:#64748b;margin-top:2px">קבל פושים ועדכונים</div></div>
+  <button class="install-btn" id="install-btn">התקן</button>
+  <button style="background:transparent;border:none;color:#64748b;font-size:16px;cursor:pointer;padding:0 4px" onclick="document.getElementById('install-banner').classList.remove('show')">✕</button>
+</div>
+<div id="header">
+  <div class="hrow">
+    <div class="logo">
+      <span style="font-size:20px">🇮🇱</span>
+      <span style="font-size:18px;font-weight:900;color:#fff">חדשות LIVE</span>
+      <span class="live-badge">LIVE</span>
+    </div>
+    <div style="text-align:left">
+      <div id="clock-time">00:00</div>
+      <div id="clock-date"></div>
+    </div>
+  </div>
+  <div class="ticker"><span class="tlabel">● שידור</span><span id="ticker-text">מתחבר לערוצים...</span></div>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('news',this)">📰 חדשות</button>
+    <button class="tab-btn" onclick="switchTab('alerts',this)">🚨 אזעקות</button>
+  </div>
+</div>
+<div id="panel-news" class="panel active">
+  <div id="status-bar">
+    <span id="status-text"><span class="spin">⟳</span> מתחבר...</span>
+    <button id="refresh-btn" onclick="loadNews(true)">⟳ רענן</button>
+  </div>
+  <div class="src-scroll" id="src-tabs"></div>
+  <div id="news-list"><div class="empty-box"><div style="font-size:40px">📡</div><p>טוען חדשות...</p></div></div>
+</div>
+<div id="panel-alerts" class="panel">
+  <div class="alerts-wrap">
+    <div id="alert-box">
+      <div id="alert-emoji">✅</div>
+      <div id="alert-status" style="color:#4ade80">אין אזעקות כרגע</div>
+      <div id="alert-areas"></div>
+      <div class="alert-sub">מתעדכן כל 8 שניות • פיקוד העורף</div>
+    </div>
+    <div class="safety-grid">
+      <div class="safety-card"><div style="font-size:26px">🏃</div><div style="font-size:12px;color:#94a3b8;margin-top:3px">בניין רגיל</div><div style="font-size:14px;font-weight:800;color:#fbbf24;margin-top:3px">90 שנ'</div></div>
+      <div class="safety-card"><div style="font-size:26px">🏠</div><div style="font-size:12px;color:#94a3b8;margin-top:3px">בית פרטי</div><div style="font-size:14px;font-weight:800;color:#fb923c;margin-top:3px">60 שנ'</div></div>
+      <div class="safety-card"><div style="font-size:26px">🌳</div><div style="font-size:12px;color:#94a3b8;margin-top:3px">שטח פתוח</div><div style="font-size:14px;font-weight:800;color:#f87171;margin-top:3px">30 שנ'</div></div>
+      <div class="safety-card"><div style="font-size:26px">🚗</div><div style="font-size:12px;color:#94a3b8;margin-top:3px">רכב</div><div style="font-size:14px;font-weight:800;color:#c084fc;margin-top:3px">עצור ושכב</div></div>
+    </div>
+    <div class="hist-title">📋 אזעקות היום</div>
+    <div id="alert-history"><div style="color:#475569;font-size:13px;text-align:center;padding:16px">טוען...</div></div>
+  </div>
+</div>
+<div id="bottom-nav">
+  <button class="nav-btn active" onclick="switchTab('news',null)" id="nav-news"><span class="nav-icon">📰</span>חדשות</button>
+  <button class="nav-btn" onclick="switchTab('alerts',null)" id="nav-alerts"><div class="nav-dot" id="alert-dot"></div><span class="nav-icon">🚨</span>אזעקות</button>
+</div>
+<script>
+let allItems=[],currentSrc='all',hasAlert=false,tickIdx=0,deferredPrompt=null;
+const CM={ynet:{name:'ynet',color:'#E8001E',icon:'📰'},walla:{name:'וואלה',color:'#FF6B00',icon:'🔥'},maariv:{name:'מעריב',color:'#0891B2',icon:'🗞️'},kan:{name:'כאן 11',color:'#2563EB',icon:'🎙️'},n12:{name:'N12',color:'#DC2626',icon:'⚡'},idf:{name:'צה״ל',color:'#15803d',icon:'🪖'},haaretz:{name:'הארץ',color:'#006B3C',icon:'📜'}};
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferredPrompt=e;document.getElementById('install-banner').classList.add('show')});
+document.getElementById('install-btn').addEventListener('click',async()=>{if(!deferredPrompt)return;deferredPrompt.prompt();deferredPrompt=null;document.getElementById('install-banner').classList.remove('show')});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js').then(()=>{if('Notification'in window&&Notification.permission==='default')setTimeout(()=>Notification.requestPermission(),3000)});
+function tick(){const n=new Date();document.getElementById('clock-time').textContent=n.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});document.getElementById('clock-date').textContent=n.toLocaleDateString('he-IL',{day:'numeric',month:'long'})}
+tick();setInterval(tick,1000);
+function rotateTicker(){if(allItems.length>0){const item=allItems[tickIdx%Math.min(allItems.length,30)];if(item)document.getElementById('ticker-text').textContent=item.sourceIcon+' '+item.title;tickIdx++}}
+setInterval(rotateTicker,5000);
+function switchTab(tab,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+tab).classList.add('active');if(btn)btn.classList.add('active');const m={news:'nav-news',alerts:'nav-alerts'};if(m[tab])document.getElementById(m[tab]).classList.add('active')}
+function renderSrcTabs(){const el=document.getElementById('src-tabs');const sources=['all',...new Set(allItems.map(i=>i.source))];el.innerHTML='';sources.forEach(id=>{const ch=id==='all'?{name:'🌐 הכל',color:'#fbbf24',icon:''}:(CM[id]||{name:id,color:'#6b7280',icon:'📰'});const b=document.createElement('button');b.className='src-btn'+(id===currentSrc?' active':'');b.textContent=(ch.icon?ch.icon+' ':'')+ch.name;if(id===currentSrc){b.style.background=ch.color+'22';b.style.borderColor=ch.color+'66';b.style.color=ch.color;b.style.fontWeight='700'}b.onclick=()=>{currentSrc=id;renderSrcTabs();renderList()};el.appendChild(b)})}
+function renderList(){const list=document.getElementById('news-list');const filtered=currentSrc==='all'?allItems:allItems.filter(n=>n.source===currentSrc);if(!filtered.length){list.innerHTML='<div class="empty-box"><div style="font-size:40px">📡</div><p>לא נמצאו כתבות</p></div>';return}list.innerHTML='';filtered.forEach((item,idx)=>{const ch=CM[item.source]||{name:item.source,color:'#6b7280',icon:'📰'};const a=document.createElement('a');a.className='news-card';a.href=item.link||'#';a.target='_blank';a.rel='noopener';a.style.cssText=`animation:fadeUp 0.2s ease ${idx*0.02}s both`;a.innerHTML=`<div class="news-stripe" style="background:${ch.color}"></div><div class="card-top"><span class="src-label" style="background:${ch.color}1a;border:1px solid ${ch.color}44;color:${ch.color}">${ch.icon} ${ch.name}</span><span class="time-label">🕐 ${item.timeAgo}</span></div><div class="news-title">${item.title}</div>${item.desc?`<div class="news-desc">${item.desc}</div>`:''}`;list.appendChild(a)})}
+async function loadNews(){const btn=document.getElementById('refresh-btn');const status=document.getElementById('status-text');btn.disabled=true;btn.innerHTML='<span class="spin">⟳</span>';status.innerHTML='<span class="spin">⟳</span> טוען...';try{const res=await fetch('/api/news?t='+Date.now());const data=await res.json();if(data.items&&data.items.length>0){allItems=data.items;const t=new Date(data.updated).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});status.textContent=`✓ ${t} • ${data.total} כתבות`;renderSrcTabs();renderList();rotateTicker()}else status.textContent='⚠️ אין נתונים'}catch(e){status.textContent='⚠️ שגיאת חיבור'}btn.disabled=false;btn.innerHTML='⟳ רענן'}
+async function checkAlerts(){try{const res=await fetch('/api/alerts?t='+Date.now());const text=await res.text();if(!text||text.trim()===''||text.trim()==='{}'){clearAlert();return}const data=JSON.parse(text);if(data&&data.data&&data.data.length>0)triggerAlert(data.data,data.title||'ירי רקטות');else clearAlert()}catch(e){}}
+async function loadAlertHistory(){try{const res=await fetch('/api/alerts/history');const data=await res.json();if(!Array.isArray(data)||!data.length)return;document.getElementById('alert-history').innerHTML=data.slice(0,8).map(a=>`<div class="hist-card"><div><div style="font-size:13px;font-weight:700;color:#e2e8f0">${a.cities||''}</div><div style="font-size:11px;color:#64748b">${a.alertHeader||''}</div></div><div style="text-align:left"><div style="font-size:12px;font-weight:700;color:#fbbf24">${a.alertDate?new Date(a.alertDate).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):''}</div><div style="font-size:10px;color:#4ade80">✓ הסתיימה</div></div></div>`).join('')}catch(e){}}
+function triggerAlert(areas,type){const str=Array.isArray(areas)?areas.join(' • '):areas;hasAlert=true;document.getElementById('alert-box').classList.add('danger');document.getElementById('alert-emoji').textContent='🚨';document.getElementById('alert-status').textContent='אזעקה פעילה!';document.getElementById('alert-status').style.color='#fca5a5';document.getElementById('alert-areas').textContent=str;document.getElementById('alert-dot').classList.add('red');const ov=document.getElementById('alert-overlay');if(!ov.classList.contains('show')){document.getElementById('overlay-areas').textContent=str;document.getElementById('overlay-type').textContent=type;ov.classList.add('show');if(navigator.vibrate)navigator.vibrate([300,100,300,100,300]);try{const ctx=new AudioContext();[440,880,440].forEach((f,i)=>{const o=ctx.createOscillator();const g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.frequency.value=f;g.gain.value=0.3;o.start(ctx.currentTime+i*0.3);o.stop(ctx.currentTime+i*0.3+0.25)})}catch(e){}}}
+function clearAlert(){if(!hasAlert)return;hasAlert=false;document.getElementById('alert-box').classList.remove('danger');document.getElementById('alert-emoji').textContent='✅';document.getElementById('alert-status').textContent='אין אזעקות כרגע';document.getElementById('alert-status').style.color='#4ade80';document.getElementById('alert-areas').textContent='';document.getElementById('alert-dot').classList.remove('red')}
+loadNews();setInterval(loadNews,60000);checkAlerts();setInterval(checkAlerts,8000);loadAlertHistory();setInterval(loadAlertHistory,60000);
+</script>
+</body>
+</html>
