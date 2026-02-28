@@ -1,0 +1,16 @@
+{
+  "name": "חדשות ישראל LIVE",
+  "short_name": "חדשות LIVE",
+  "description": "חדשות ישראל בזמן אמת עם אזעקות",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#06090f",
+  "theme_color": "#ef4444",
+  "orientation": "portrait",
+  "lang": "he",
+  "dir": "rtl",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
