@@ -5,19 +5,18 @@ const https = require('https');
 const path = require('path');
 
 const app = express();
-const parser = new Parser({ timeout: 8000 });
+const parser = new Parser({ timeout: 10000, headers: { 'User-Agent': 'Mozilla/5.0 (compatible; NewsBot/1.0)' } });
 
 app.use(cors());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const CHANNELS = [
-  { id: 'ynet',      name: 'ynet',     color: '#E8001E', icon: '📰', url: 'https://www.ynet.co.il/Integration/StoryRss2.xml' },
-  { id: 'walla',     name: 'וואלה',   color: '#FF6B00', icon: '🔥', url: 'https://rss.walla.co.il/feed/22' },
-  { id: 'maariv',    name: 'מעריב',   color: '#0891B2', icon: '🗞️', url: 'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot' },
-  { id: 'kan',       name: 'כאן 11',  color: '#2563EB', icon: '🎙️', url: 'https://www.kan.org.il/Rss/RssKan.aspx?CatId=30' },
-  { id: 'n12',       name: 'N12',      color: '#DC2626', icon: '⚡', url: 'https://www.mako.co.il/rss/31750a2610f26110VgnVCM2000002a0c10acRCRD.xml' },
-  { id: 'idf',       name: 'צה״ל',    color: '#15803d', icon: '🪖', url: 'https://www.idf.il/rss/' },
-  { id: 'haaretz',   name: 'הארץ',    color: '#006B3C', icon: '📜', url: 'https://www.haaretz.co.il/cmlink/1.4585' },
+  { id: 'ynet',   name: 'ynet',   color: '#E8001E', icon: '📰', url: 'https://www.ynet.co.il/Integration/StoryRss2.xml' },
+  { id: 'walla',  name: 'וואלה', color: '#FF6B00', icon: '🔥', url: 'https://rss.walla.co.il/feed/22' },
+  { id: 'maariv', name: 'מעריב', color: '#0891B2', icon: '🗞️', url: 'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot' },
+  { id: 'kan',    name: 'כאן 11',color: '#2563EB', icon: '🎙️', url: 'https://www.kan.org.il/Rss/RssKan.aspx?CatId=30' },
+  { id: 'walla2', name: 'וואלה ביטחון', color: '#dc6b00', icon: '⚔️', url: 'https://rss.walla.co.il/feed/2686' },
+  { id: 'ynet2',  name: 'ynet מלחמה', color: '#b30000', icon: '🚨', url: 'https://www.ynet.co.il/Integration/StoryRss2784.xml' },
 ];
 
 let newsCache = [];
@@ -28,10 +27,10 @@ function timeAgo(dateStr) {
   try {
     const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 60000);
     if (diff < 1) return 'עכשיו';
-    if (diff < 60) return `לפני ${diff} דקות`;
+    if (diff < 60) return 'לפני ' + diff + ' דקות';
     const h = Math.floor(diff / 60);
-    if (h < 24) return `לפני ${h} שעות`;
-    return `לפני ${Math.floor(h / 24)} ימים`;
+    if (h < 24) return 'לפני ' + h + ' שעות';
+    return 'לפני ' + Math.floor(h / 24) + ' ימים';
   } catch (e) { return ''; }
 }
 
@@ -52,7 +51,7 @@ async function fetchChannel(ch) {
       ts: new Date(item.pubDate || item.isoDate).getTime() || (Date.now() - i * 60000),
     }));
   } catch (e) {
-    console.log(`Error fetching ${ch.name}:`, e.message);
+    console.log('Error fetching ' + ch.name + ': ' + e.message);
     return [];
   }
 }
@@ -61,13 +60,11 @@ async function refreshNews() {
   console.log('Fetching all channels...');
   const results = await Promise.allSettled(CHANNELS.map(ch => fetchChannel(ch)));
   let combined = [];
-  results.forEach(r => {
-    if (r.status === 'fulfilled') combined.push(...r.value);
-  });
+  results.forEach(r => { if (r.status === 'fulfilled') combined.push(...r.value); });
   combined.sort((a, b) => b.ts - a.ts);
   newsCache = combined;
   cacheTime = Date.now();
-  console.log(`Fetched ${combined.length} items`);
+  console.log('Fetched ' + combined.length + ' items');
 }
 
 app.get('/api/news', async (req, res) => {
@@ -103,7 +100,7 @@ app.get('/api/alerts/history', (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log('Server running on port ' + PORT);
   refreshNews();
   setInterval(refreshNews, CACHE_TTL);
 });
