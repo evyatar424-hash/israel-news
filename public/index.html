@@ -2,364 +2,778 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#f5f4f0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#070709">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="חדשות IL">
+<meta name="apple-mobile-web-app-title" content="IL NEWS">
 <link rel="manifest" href="/manifest.json">
-<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות ישראל</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Hebrew:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<title>IL NEWS — חדשות ישראל</title>
 <style>
-:root {
-  --bg:#f5f4f0;--bg2:#eeecea;--bg3:#e5e3de;
-  --card:#ffffff;--card2:#faf9f7;
-  --border:rgba(0,0,0,0.07);--shadow:0 2px 12px rgba(0,0,0,0.06);
-  --text:#1a1917;--text2:#6b6860;--text3:#a09d98;
-  --red:#dc2626;--orange:#ea580c;--green:#16a34a;--blue:#2563eb;
-  --r:16px;--f:'Heebo',sans-serif;
+:root{
+  --ink:#070709;
+  --ink2:#0d0d12;
+  --ink3:#13131a;
+  --surface:#1a1a24;
+  --surface2:#20202c;
+  --line:rgba(255,255,255,0.06);
+  --line2:rgba(255,255,255,0.1);
+  --text:#e8e8f0;
+  --text2:#8080a0;
+  --text3:#40405a;
+  --red:#ff2d2d;
+  --red2:#cc1111;
+  --amber:#f59e0b;
+  --green:#22c55e;
+  --blue:#3b82f6;
+  --r:14px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
-body{font-family:var(--f);background:var(--bg);color:var(--text);max-width:480px;margin:0 auto;padding-bottom:80px;min-height:100vh;-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:0;height:0}
-#header{position:sticky;top:0;z-index:50;background:rgba(245,244,240,0.97);backdrop-filter:blur(16px);border-bottom:1px solid var(--border)}
-.h-top{display:flex;justify-content:space-between;align-items:center;padding:12px 16px 10px}
-.logo{display:flex;align-items:center;gap:10px}
-.logo-name{font-size:17px;font-weight:900;color:var(--text);letter-spacing:-0.5px}
-.logo-name em{color:var(--red);font-style:normal}
-.live-pill{display:flex;align-items:center;gap:5px;background:var(--red);border-radius:20px;padding:3px 9px;font-size:10px;font-weight:800;color:#fff;letter-spacing:0.5px}
-.live-dot{width:6px;height:6px;border-radius:50%;background:#fff;animation:blink 1s infinite}
-#clock-time{font-size:16px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;text-align:left}
-#clock-date{font-size:10px;color:var(--text3);text-align:left}
-#alert-banner{display:none;margin:0 12px 10px;padding:12px 14px;background:var(--red);border-radius:12px;animation:ablink 1s ease-in-out infinite}
-#alert-banner.show{display:flex;align-items:center;gap:10px}
-.ab-icon{font-size:22px;animation:shake 0.4s infinite}
-.ab-title{font-size:13px;font-weight:900;color:#fff}
-.ab-areas{font-size:11px;color:rgba(255,255,255,0.85);margin-top:2px}
-@keyframes ablink{0%,100%{opacity:1}50%{opacity:0.85}}
-@keyframes shake{0%,100%{transform:rotate(0)}30%{transform:rotate(-8deg)}70%{transform:rotate(8deg)}}
-.ticker{display:flex;align-items:center;gap:8px;padding:6px 16px;background:var(--text);overflow:hidden}
-.ticker-lbl{font-size:9px;font-weight:900;color:var(--red);background:#fee2e2;padding:2px 6px;border-radius:4px;white-space:nowrap;letter-spacing:1px;flex-shrink:0}
-#ticker-text{font-size:12px;color:rgba(255,255,255,0.85);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;transition:opacity 0.3s}
-.tabs{display:flex;border-bottom:1px solid var(--border)}
-.tab-btn{flex:1;padding:10px 0;border:none;cursor:pointer;background:transparent;font-size:12px;font-weight:600;color:var(--text3);border-bottom:2px solid transparent;transition:all 0.2s;font-family:var(--f);display:flex;align-items:center;justify-content:center;gap:5px}
-.tab-btn.active{color:var(--red);border-bottom-color:var(--red);font-weight:800}
-.panel{display:none}.panel.active{display:block}
-#status-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--card2);border-bottom:1px solid var(--border)}
-#status-text{font-size:11px;color:var(--text3);flex:1}
-#refresh-btn{padding:5px 12px;border-radius:20px;background:var(--text);border:none;color:#fff;font-size:11px;cursor:pointer;font-weight:700;font-family:var(--f)}
-.src-scroll{display:flex;gap:6px;padding:10px 16px;overflow-x:auto;scrollbar-width:none;background:var(--card2);border-bottom:1px solid var(--border)}
-.src-btn{padding:5px 13px;border-radius:20px;border:1.5px solid var(--border);cursor:pointer;background:var(--card);color:var(--text2);font-size:11px;white-space:nowrap;flex-shrink:0;font-family:var(--f);font-weight:600;transition:all 0.15s}
-#news-list{padding:12px}
-.section-hdr{display:flex;align-items:center;gap:8px;padding:4px 4px 10px;font-size:10px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px}
-.section-line{flex:1;height:1px;background:var(--border)}
-.news-card{display:block;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:14px 15px 13px 14px;margin-bottom:8px;position:relative;overflow:hidden;box-shadow:var(--shadow);transition:transform 0.12s,box-shadow 0.12s}
-.news-card:active{transform:scale(0.99);box-shadow:none}
-.news-card::before{content:'';position:absolute;top:0;right:0;bottom:0;width:3px;border-radius:0 var(--r) var(--r) 0;background:var(--src-color,#ddd)}
-.news-card.breaking{background:linear-gradient(135deg,#fff5f5 0%,#fff 60%);border-color:rgba(220,38,38,0.2)}
-.card-meta{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:8px}
-.src-tag{display:flex;align-items:center;gap:4px;font-size:11px;font-weight:800;padding:2px 8px;border-radius:6px;white-space:nowrap}
-.card-time{font-size:11px;color:var(--text3);white-space:nowrap;display:flex;align-items:center;gap:4px}
-.new-pill{background:var(--green);color:#fff;font-size:9px;font-weight:800;padding:1px 5px;border-radius:4px}
-.card-title{font-size:14px;font-weight:700;line-height:1.55;color:var(--text)}
-.news-card.breaking .card-title{color:var(--red)}
-.card-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.empty{text-align:center;padding:48px 20px;color:var(--text3)}
-.alerts-wrap{padding:14px}
-.oref-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:12px;box-shadow:var(--shadow)}
-.oref-dot2{width:12px;height:12px;border-radius:50%;flex-shrink:0;background:var(--green);box-shadow:0 0 0 3px rgba(22,163,74,0.15);animation:breathe 2s ease-in-out infinite}
-.oref-dot2.red{background:var(--red);box-shadow:0 0 0 3px rgba(220,38,38,0.15)}
-.oref-dot2.grey{background:var(--text3);box-shadow:none;animation:none}
-@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.3)}}
-.oref-lbl{font-size:12px;font-weight:700;color:var(--text);flex:1}
-.oref-sub2{font-size:10px;color:var(--text3);margin-top:1px}
-#oref-time{font-size:10px;color:var(--text3)}
-#alert-box{border-radius:var(--r);padding:24px 20px;margin-bottom:14px;text-align:center;border:1.5px solid rgba(22,163,74,0.3);background:linear-gradient(135deg,#f0fdf4,#fff);transition:all 0.4s}
-#alert-box.danger{background:linear-gradient(135deg,#fee2e2,#fef2f2);border-color:rgba(220,38,38,0.4);animation:dangerPulse 1.2s ease-in-out infinite}
-@keyframes dangerPulse{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.2)}50%{box-shadow:0 0 0 8px rgba(220,38,38,0)}}
-#alert-emoji{font-size:48px;margin-bottom:8px}
-#alert-status{font-size:18px;font-weight:900;color:var(--green)}
-#alert-box.danger #alert-status{color:var(--red)}
-#alert-areas{font-size:14px;color:var(--red);margin-top:10px;line-height:2;font-weight:700}
-.alert-sub{font-size:10px;color:var(--text3);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px}
-.oref-chip{background:rgba(22,163,74,0.1);border:1px solid rgba(22,163,74,0.2);border-radius:4px;padding:1px 6px;font-size:9px;font-weight:700;color:var(--green)}
-.safety-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
-.safety-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px 12px;text-align:center;box-shadow:var(--shadow)}
-.hist-lbl{font-size:11px;font-weight:800;color:var(--text2);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px}
-.hist-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 14px;margin-bottom:7px;display:flex;justify-content:space-between;align-items:center;box-shadow:var(--shadow)}
-.hist-loc{font-size:12px;font-weight:700;color:var(--text)}
-.hist-type2{font-size:10px;color:var(--text3);margin-top:2px}
-.hist-t{font-size:11px;font-weight:700;color:var(--text2);text-align:left}
-#alert-overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.6);backdrop-filter:blur(8px);align-items:center;justify-content:center}
-#alert-overlay.show{display:flex}
-.alert-modal{background:#fff;border-radius:24px;padding:32px 28px;text-align:center;width:88%;max-width:340px;border-top:5px solid var(--red);box-shadow:0 24px 64px rgba(220,38,38,0.25);animation:modalIn 0.3s cubic-bezier(0.34,1.56,0.64,1)}
-@keyframes modalIn{from{transform:scale(0.8);opacity:0}to{transform:scale(1);opacity:1}}
-.modal-areas{font-size:15px;color:var(--red);margin-top:10px;line-height:1.9;font-weight:700}
-.modal-warn{margin-top:14px;padding:10px 16px;background:#fee2e2;border-radius:10px;font-size:12px;font-weight:700;color:var(--red)}
-.modal-btn{margin-top:18px;width:100%;padding:13px;border-radius:14px;border:none;background:var(--red);color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--f)}
-.settings-wrap{padding:14px}
-.s-sec{margin-bottom:20px}
-.s-sec-ttl{font-size:11px;font-weight:800;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
-.s-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
-.s-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border)}
+html{background:var(--ink)}
+body{
+  font-family:'Noto Sans Hebrew',sans-serif;
+  background:var(--ink);
+  color:var(--text);
+  max-width:480px;margin:0 auto;
+  padding-bottom:76px;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+  position:relative;overflow-x:hidden;
+}
+::-webkit-scrollbar{display:none}
+
+/* ── ATMOSPHERIC BG ── */
+.atm{
+  position:fixed;pointer-events:none;z-index:0;
+  top:-30%;right:-20%;
+  width:70vw;height:70vw;max-width:360px;max-height:360px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(255,45,45,0.07) 0%,transparent 65%);
+  animation:atm1 8s ease-in-out infinite;
+}
+.atm2{
+  position:fixed;pointer-events:none;z-index:0;
+  bottom:-20%;left:-20%;
+  width:60vw;height:60vw;max-width:300px;max-height:300px;
+  border-radius:50%;
+  background:radial-gradient(circle,rgba(59,130,246,0.05) 0%,transparent 65%);
+  animation:atm2 11s ease-in-out infinite;
+}
+@keyframes atm1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-5%,5%) scale(1.1)}}
+@keyframes atm2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(5%,-5%) scale(1.08)}}
+
+/* ── HEADER ── */
+#header{
+  position:sticky;top:0;z-index:50;
+  background:rgba(7,7,9,0.9);
+  backdrop-filter:blur(24px);
+  border-bottom:1px solid var(--line);
+}
+
+.h-brand{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:11px 16px 9px;
+}
+.brand-left{display:flex;align-items:center;gap:10px}
+.brand-mark{
+  font-family:'JetBrains Mono',monospace;
+  font-size:16px;font-weight:700;
+  color:var(--red);
+  letter-spacing:2px;
+}
+.brand-sep{width:1px;height:16px;background:var(--line2)}
+.brand-name{
+  font-size:13px;font-weight:600;color:var(--text2);
+  letter-spacing:0.5px;
+}
+.brand-right{display:flex;align-items:center;gap:8px}
+.live-chip{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(255,45,45,0.12);
+  border:1px solid rgba(255,45,45,0.3);
+  border-radius:6px;padding:3px 8px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;font-weight:700;color:var(--red);
+  letter-spacing:1px;
+}
+.pulse-dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pdot 1.4s ease-in-out infinite}
+@keyframes pdot{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.3;transform:scale(0.7)}}
+#clock{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--text2)}
+
+/* ── ALERT STRIP ── */
+#alert-strip{
+  display:none;overflow:hidden;
+  background:linear-gradient(90deg,rgba(255,45,45,0.18),rgba(204,17,17,0.12));
+  border-bottom:1px solid rgba(255,45,45,0.25);
+}
+#alert-strip.on{display:block;animation:stripIn 0.3s ease}
+@keyframes stripIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.strip-inner{display:flex;align-items:center;gap:10px;padding:8px 16px}
+.strip-icon{font-size:18px;animation:sicon 0.5s ease-in-out infinite alternate}
+@keyframes sicon{from{transform:scale(1)}to{transform:scale(1.2)}}
+.strip-content{flex:1}
+.strip-title{font-size:12px;font-weight:800;color:#ff6b6b}
+.strip-areas{font-size:11px;color:rgba(255,107,107,0.7);margin-top:1px}
+
+/* ── TICKER ── */
+.ticker-wrap{
+  display:flex;align-items:center;gap:10px;
+  padding:6px 16px;
+  background:rgba(255,255,255,0.02);
+  border-bottom:1px solid var(--line);
+  overflow:hidden;
+}
+.ticker-tag{
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;font-weight:700;color:var(--amber);
+  background:rgba(245,158,11,0.1);
+  border:1px solid rgba(245,158,11,0.25);
+  border-radius:4px;padding:2px 6px;
+  white-space:nowrap;flex-shrink:0;letter-spacing:1px;
+}
+#ticker-text{
+  font-size:12px;color:rgba(232,232,240,0.6);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  flex:1;transition:opacity 0.4s;
+  font-weight:400;
+}
+
+/* ── TABS ── */
+.tabs{
+  display:flex;
+  background:var(--ink);
+  border-bottom:1px solid var(--line);
+}
+.tab{
+  flex:1;padding:10px 0;
+  border:none;cursor:pointer;background:transparent;
+  font-size:11px;font-weight:600;color:var(--text3);
+  border-bottom:2px solid transparent;
+  transition:all 0.18s;font-family:inherit;
+  display:flex;align-items:center;justify-content:center;gap:5px;
+}
+.tab.on{color:var(--red);border-bottom-color:var(--red);font-weight:800}
+.panel{display:none}.panel.on{display:block}
+
+/* ── STATUS ROW ── */
+.status-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:7px 14px;
+  background:var(--ink2);
+  border-bottom:1px solid var(--line);
+}
+#status-txt{font-size:10px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+#rfbtn{
+  padding:4px 12px;border-radius:6px;
+  background:rgba(255,45,45,0.1);border:1px solid rgba(255,45,45,0.2);
+  color:var(--red);font-size:10px;cursor:pointer;font-weight:700;
+  font-family:'JetBrains Mono',monospace;letter-spacing:0.5px;
+  transition:all 0.15s;
+}
+#rfbtn:active{background:rgba(255,45,45,0.2)}
+
+/* ── SOURCE PILLS ── */
+.src-row{
+  display:flex;gap:5px;padding:9px 14px;
+  overflow-x:auto;scrollbar-width:none;
+  border-bottom:1px solid var(--line);
+  background:var(--ink2);
+}
+.spill{
+  padding:4px 12px;border-radius:20px;
+  border:1px solid var(--line2);
+  cursor:pointer;background:transparent;
+  color:var(--text3);font-size:10px;
+  white-space:nowrap;flex-shrink:0;
+  font-family:inherit;font-weight:600;
+  transition:all 0.15s;
+}
+.spill.on{font-weight:800}
+
+/* ── NEWS CARDS ── */
+#news-list{padding:10px 12px}
+
+.time-sep{
+  display:flex;align-items:center;gap:8px;
+  padding:4px 2px 10px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:9px;color:var(--text3);letter-spacing:1px;
+}
+.time-sep-line{flex:1;height:1px;background:var(--line)}
+
+.card{
+  display:block;text-decoration:none;color:inherit;
+  background:var(--ink2);
+  border:1px solid var(--line);
+  border-radius:var(--r);
+  padding:13px 14px 12px;
+  margin-bottom:6px;
+  position:relative;overflow:hidden;
+  transition:background 0.12s,border-color 0.12s,transform 0.1s;
+}
+.card:active{transform:scale(0.988);background:var(--ink3)}
+
+/* glow line on right */
+.card::after{
+  content:'';
+  position:absolute;top:12px;right:0;
+  width:2px;height:calc(100% - 24px);
+  border-radius:2px 0 0 2px;
+  background:var(--src-c,var(--line2));
+  opacity:0.7;
+}
+
+/* NEW card highlight */
+.card.fresh{border-color:rgba(34,197,94,0.2)}
+.card.fresh::before{
+  content:'';position:absolute;top:0;left:0;right:0;bottom:0;
+  background:linear-gradient(135deg,rgba(34,197,94,0.04),transparent 60%);
+  pointer-events:none;border-radius:var(--r);
+}
+
+/* BREAKING top card */
+.card.top{
+  border-color:rgba(255,45,45,0.2);
+  background:linear-gradient(135deg,rgba(255,45,45,0.06) 0%,var(--ink2) 50%);
+}
+
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.src-badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:10px;font-weight:800;
+  padding:2px 8px;border-radius:5px;
+  white-space:nowrap;flex-shrink:0;
+}
+.card-time-row{display:flex;align-items:center;gap:5px;flex-shrink:0}
+.card-time{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--text3)}
+.new-tag{
+  background:var(--green);color:#000;
+  font-size:8px;font-weight:900;
+  padding:1px 5px;border-radius:3px;letter-spacing:0.5px;
+}
+.card-title{font-size:13.5px;font-weight:700;line-height:1.55;color:var(--text)}
+.card.top .card-title{color:#ff8080}
+.card-desc{font-size:11.5px;color:var(--text2);line-height:1.5;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+.empty-state{text-align:center;padding:52px 20px;color:var(--text3)}
+
+/* ── ALERTS PANEL ── */
+.a-wrap{padding:12px}
+
+.oref-bar{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  background:var(--ink2);border:1px solid var(--line);
+  border-radius:var(--r);margin-bottom:10px;
+}
+.oref-ind{
+  width:10px;height:10px;border-radius:50%;flex-shrink:0;
+  background:var(--green);
+  box-shadow:0 0 0 0 rgba(34,197,94,0.4);
+  animation:orefpulse 2s infinite;
+}
+.oref-ind.offline{background:var(--text3);box-shadow:none;animation:none}
+.oref-ind.alert{background:var(--red);box-shadow:0 0 0 0 rgba(255,45,45,0.5);animation:redalert 1s infinite}
+@keyframes orefpulse{0%{box-shadow:0 0 0 0 rgba(34,197,94,0.4)}70%{box-shadow:0 0 0 7px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
+@keyframes redalert{0%{box-shadow:0 0 0 0 rgba(255,45,45,0.6)}70%{box-shadow:0 0 0 10px rgba(255,45,45,0)}100%{box-shadow:0 0 0 0 rgba(255,45,45,0)}}
+.oref-info{flex:1}
+.oref-name{font-size:12px;font-weight:700;color:var(--text)}
+.oref-detail{font-size:10px;color:var(--text3);margin-top:1px}
+#oref-ts{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3)}
+
+#abox{
+  border-radius:var(--r);padding:22px 18px;margin-bottom:10px;
+  text-align:center;
+  border:1px solid rgba(34,197,94,0.15);
+  background:rgba(34,197,94,0.04);
+  transition:all 0.3s;
+}
+#abox.danger{
+  border-color:rgba(255,45,45,0.3);
+  background:linear-gradient(135deg,rgba(255,45,45,0.1),rgba(204,17,17,0.06));
+  animation:boxpulse 1.5s ease-in-out infinite;
+}
+@keyframes boxpulse{0%,100%{box-shadow:0 0 0 0 rgba(255,45,45,0.15)}50%{box-shadow:0 0 0 12px rgba(255,45,45,0)}}
+#abox-icon{font-size:44px;margin-bottom:6px}
+#abox-status{font-size:17px;font-weight:900;color:var(--green)}
+#abox.danger #abox-status{color:#ff6b6b}
+#abox-areas{font-size:13px;color:#ff8080;margin-top:8px;line-height:2;font-weight:700}
+.abox-meta{font-size:9px;color:var(--text3);margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;font-family:'JetBrains Mono',monospace}
+.oref-chip{
+  background:rgba(34,197,94,0.08);border:1px solid rgba(34,197,94,0.2);
+  border-radius:3px;padding:1px 5px;font-size:8px;color:var(--green);font-weight:700;
+}
+
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-bottom:10px}
+.scard{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);padding:13px 11px;text-align:center}
+.scard-icon{font-size:24px;margin-bottom:4px}
+.scard-lbl{font-size:10px;color:var(--text2)}
+.scard-time{font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;margin-top:5px}
+
+.hist-hdr{font-size:9px;font-weight:800;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;font-family:'JetBrains Mono',monospace}
+.hcard{background:var(--ink2);border:1px solid var(--line);border-radius:10px;padding:10px 13px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.hcard-city{font-size:12px;font-weight:700;color:var(--text)}
+.hcard-type{font-size:10px;color:var(--text3);margin-top:2px}
+.hcard-time{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--amber)}
+
+/* ── SETTINGS ── */
+.s-wrap{padding:12px}
+.s-section{margin-bottom:18px}
+.s-hdr{font-size:9px;font-weight:800;color:var(--text3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:7px;font-family:'JetBrains Mono',monospace}
+.s-block{background:var(--ink2);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.s-row{display:flex;align-items:center;justify-content:space-between;padding:13px 15px;border-bottom:1px solid var(--line)}
 .s-row:last-child{border-bottom:none}
-.s-row.col{flex-direction:column;align-items:flex-start;gap:10px}
-.s-lbl{font-size:14px;font-weight:600;color:var(--text)}
-.s-sub2{font-size:11px;color:var(--text3);margin-top:2px}
-.toggle{width:46px;height:26px;border-radius:13px;background:var(--bg3);border:none;cursor:pointer;position:relative;transition:all 0.2s;flex-shrink:0}
-.toggle.on{background:var(--green)}
-.toggle::after{content:'';position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);transition:all 0.2s}
-.toggle.on::after{right:23px}
-.vol-slider{width:100%;accent-color:var(--red);cursor:pointer;height:4px}
-.test-btn{width:100%;padding:12px;border-radius:12px;background:var(--bg2);border:1.5px solid var(--border);color:var(--text);font-size:13px;font-weight:700;cursor:pointer;font-family:var(--f);margin-top:6px}
-.notif-btn{width:100%;padding:14px;border-radius:14px;background:var(--text);border:none;color:#fff;font-size:14px;font-weight:800;cursor:pointer;font-family:var(--f);margin-bottom:10px}
-#bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;z-index:100;background:rgba(245,244,240,0.97);border-top:1px solid var(--border);display:flex;backdrop-filter:blur(16px);padding-bottom:env(safe-area-inset-bottom)}
-.nav-btn{flex:1;padding:10px 0;border:none;cursor:pointer;background:transparent;font-size:10px;font-weight:600;color:var(--text3);display:flex;flex-direction:column;align-items:center;gap:3px;font-family:var(--f);position:relative;transition:color 0.15s}
-.nav-btn.active{color:var(--red);font-weight:800}
-.nav-icon{font-size:21px;line-height:1}
-.nav-badge{position:absolute;top:7px;right:calc(50% - 16px);width:8px;height:8px;border-radius:50%;background:var(--green);border:2px solid var(--bg)}
-.nav-badge.alert{background:var(--red);animation:blink 0.8s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:0.2}}
-@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.s-row.col{flex-direction:column;align-items:flex-start;gap:9px}
+.s-label{font-size:13px;font-weight:600;color:var(--text)}
+.s-sub{font-size:10px;color:var(--text3);margin-top:2px}
+.tog{width:44px;height:24px;border-radius:12px;background:var(--surface);border:1px solid var(--line2);cursor:pointer;position:relative;transition:all 0.2s;flex-shrink:0}
+.tog.on{background:var(--green);border-color:var(--green)}
+.tog::after{content:'';position:absolute;top:3px;right:3px;width:18px;height:18px;border-radius:50%;background:#fff;transition:all 0.2s;box-shadow:0 1px 4px rgba(0,0,0,0.3)}
+.tog.on::after{right:23px}
+.vol-sl{width:100%;cursor:pointer;accent-color:var(--red)}
+.notif-btn{
+  width:100%;padding:13px;border-radius:10px;
+  background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.25);
+  color:#60a5fa;font-size:13px;font-weight:700;
+  cursor:pointer;font-family:inherit;margin-bottom:8px;
+  transition:all 0.15s;
+}
+.notif-btn:active{background:rgba(59,130,246,0.2)}
+.test-btn{
+  width:100%;padding:11px;border-radius:10px;
+  background:rgba(255,45,45,0.08);border:1px solid rgba(255,45,45,0.2);
+  color:var(--red);font-size:12px;font-weight:700;
+  cursor:pointer;font-family:inherit;margin-top:6px;
+  transition:all 0.15s;
+}
+
+/* ── ALERT OVERLAY ── */
+#overlay{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);align-items:center;justify-content:center}
+#overlay.on{display:flex}
+.o-modal{
+  background:linear-gradient(145deg,#1a0a0a,#130505);
+  border:1px solid rgba(255,45,45,0.4);
+  border-radius:20px;padding:28px 22px;text-align:center;
+  width:88%;max-width:340px;
+  box-shadow:0 0 60px rgba(255,45,45,0.2),inset 0 1px 0 rgba(255,255,255,0.06);
+  animation:omin 0.35s cubic-bezier(0.34,1.56,0.64,1);
+}
+@keyframes omin{from{transform:scale(0.85) translateY(20px);opacity:0}to{transform:scale(1) translateY(0);opacity:1}}
+.o-type{font-size:13px;color:rgba(255,107,107,0.7);margin-top:4px;font-weight:500}
+.o-areas{font-size:15px;color:#ff8080;margin-top:12px;line-height:2;font-weight:700}
+.o-warn{
+  margin-top:14px;padding:10px 14px;
+  background:rgba(255,45,45,0.1);border:1px solid rgba(255,45,45,0.2);
+  border-radius:8px;font-size:12px;font-weight:700;color:#ff6b6b;
+}
+.o-btn{
+  margin-top:16px;width:100%;padding:13px;
+  border-radius:10px;border:1px solid rgba(255,45,45,0.3);
+  background:rgba(255,45,45,0.1);color:#ff8080;
+  font-size:14px;font-weight:800;cursor:pointer;font-family:inherit;
+  transition:all 0.15s;
+}
+.o-btn:active{background:rgba(255,45,45,0.25)}
+
+/* ── BOTTOM NAV ── */
+#bnav{
+  position:fixed;bottom:0;left:50%;transform:translateX(-50%);
+  width:100%;max-width:480px;z-index:100;
+  background:rgba(7,7,9,0.96);
+  border-top:1px solid var(--line);
+  display:flex;backdrop-filter:blur(20px);
+  padding-bottom:env(safe-area-inset-bottom);
+}
+.nbtn{
+  flex:1;padding:10px 0;border:none;cursor:pointer;background:transparent;
+  font-size:9px;font-weight:600;color:var(--text3);
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-family:inherit;position:relative;transition:color 0.15s;
+  letter-spacing:0.5px;
+}
+.nbtn.on{color:var(--red);font-weight:800}
+.nicon{font-size:20px;line-height:1}
+.nbadge{position:absolute;top:7px;right:calc(50% - 15px);width:7px;height:7px;border-radius:50%;background:var(--green);border:2px solid var(--ink)}
+.nbadge.danger{background:var(--red);animation:blink 0.9s infinite}
+
+/* ── UTILS ── */
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.15}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 .spin{display:inline-block;animation:spin 0.6s linear infinite}
+.empty-state{padding:52px 20px;text-align:center;color:var(--text3)}
 </style>
 </head>
 <body>
+<div class="atm"></div>
+<div class="atm2"></div>
 
-<div id="alert-overlay">
-  <div class="alert-modal">
-    <div style="font-size:56px">🚨</div>
-    <div style="font-size:24px;font-weight:900;color:var(--red);margin-top:6px">אזעקה!</div>
-    <div id="overlay-type" style="font-size:15px;font-weight:600;color:var(--text2);margin-top:4px"></div>
-    <div class="modal-areas" id="overlay-areas"></div>
-    <div class="modal-warn">⚠️ היכנסו למרחב מוגן מיידית!</div>
-    <button class="modal-btn" onclick="dismissOverlay()">הבנתי — נכנסתי למרחב מוגן</button>
+<!-- ALERT OVERLAY -->
+<div id="overlay">
+  <div class="o-modal">
+    <div style="font-size:54px">🚨</div>
+    <div style="font-size:22px;font-weight:900;color:#ff4040;margin-top:6px">אזעקה!</div>
+    <div class="o-type" id="o-type"></div>
+    <div class="o-areas" id="o-areas"></div>
+    <div class="o-warn">⚠️ היכנסו למרחב מוגן מיידית!</div>
+    <button class="o-btn" onclick="closeOverlay()">הבנתי — נכנסתי למרחב מוגן</button>
   </div>
 </div>
 
+<!-- HEADER -->
 <div id="header">
-  <div class="h-top">
-    <div class="logo">
-      <span style="font-size:22px">🇮🇱</span>
-      <span class="logo-name">חדשות <em>LIVE</em></span>
-      <div class="live-pill"><span class="live-dot"></span>שידור</div>
+  <div class="h-brand">
+    <div class="brand-left">
+      <span style="font-size:20px">🇮🇱</span>
+      <div class="brand-mark">IL NEWS</div>
+      <div class="brand-sep"></div>
+      <div class="brand-name">חדשות בזמן אמת</div>
     </div>
-    <div>
-      <div id="clock-time">00:00</div>
-      <div id="clock-date"></div>
+    <div class="brand-right">
+      <div class="live-chip"><div class="pulse-dot"></div>LIVE</div>
+      <div id="clock">--:--</div>
     </div>
   </div>
-  <div id="alert-banner">
-    <div class="ab-icon">🚨</div>
-    <div><div class="ab-title">אזעקה פעילה!</div><div class="ab-areas" id="banner-areas"></div></div>
+  <div id="alert-strip">
+    <div class="strip-inner">
+      <div class="strip-icon">🚨</div>
+      <div class="strip-content">
+        <div class="strip-title">אזעקה פעילה</div>
+        <div class="strip-areas" id="strip-areas"></div>
+      </div>
+    </div>
   </div>
-  <div class="ticker"><span class="ticker-lbl">מבזק</span><span id="ticker-text">מתחבר...</span></div>
+  <div class="ticker-wrap">
+    <div class="ticker-tag">BREAKING</div>
+    <div id="ticker-text">מתחבר לערוצים...</div>
+  </div>
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('news',this)">📰 חדשות</button>
-    <button class="tab-btn" onclick="switchTab('alerts',this)">🚨 אזעקות</button>
-    <button class="tab-btn" onclick="switchTab('settings',this)">⚙️ הגדרות</button>
+    <button class="tab on" onclick="goTab('news',this)">📰 חדשות</button>
+    <button class="tab" onclick="goTab('alerts',this)">🚨 אזעקות</button>
+    <button class="tab" onclick="goTab('settings',this)">⚙️ הגדרות</button>
   </div>
 </div>
 
-<div id="panel-news" class="panel active">
-  <div id="status-bar">
-    <span id="status-text"><span class="spin">⟳</span> טוען...</span>
-    <button id="refresh-btn" onclick="loadNews(true)">⟳ רענן</button>
+<!-- NEWS -->
+<div id="panel-news" class="panel on">
+  <div class="status-row">
+    <span id="status-txt"><span class="spin">⟳</span>&nbsp;טוען...</span>
+    <button id="rfbtn" onclick="loadNews(true)">⟳ REFRESH</button>
   </div>
-  <div class="src-scroll" id="src-tabs"></div>
-  <div id="news-list"><div class="empty"><div style="font-size:48px">📡</div><p style="margin-top:10px;font-weight:600">טוען חדשות...</p></div></div>
+  <div class="src-row" id="src-row"></div>
+  <div id="news-list">
+    <div class="empty-state"><div style="font-size:44px">📡</div><p style="margin-top:10px;font-size:13px;font-weight:600">מתחבר לערוצים...</p></div>
+  </div>
 </div>
 
+<!-- ALERTS -->
 <div id="panel-alerts" class="panel">
-  <div class="alerts-wrap">
-    <div class="oref-card">
-      <div class="oref-dot2 grey" id="oref-dot"></div>
-      <div><div class="oref-lbl">פיקוד העורף</div><div class="oref-sub2">בדיקה כל 5 שניות • oref.org.il</div></div>
-      <div id="oref-time">--:--</div>
+  <div class="a-wrap">
+    <div class="oref-bar">
+      <div class="oref-ind offline" id="oref-ind"></div>
+      <div class="oref-info">
+        <div class="oref-name">פיקוד העורף — oref.org.il</div>
+        <div class="oref-detail">בדיקה כל 5 שניות • נתונים רשמיים</div>
+      </div>
+      <div id="oref-ts">--:--:--</div>
     </div>
-    <div id="alert-box">
-      <div id="alert-emoji">✅</div>
-      <div id="alert-status">אין אזעקות כרגע</div>
-      <div id="alert-areas"></div>
-      <div class="alert-sub"><span class="oref-chip">● oref.org.il</span><span>מתעדכן כל 5 שניות</span></div>
+
+    <div id="abox">
+      <div id="abox-icon">✅</div>
+      <div id="abox-status">אין אזעקות כרגע</div>
+      <div id="abox-areas"></div>
+      <div class="abox-meta">
+        <span class="oref-chip">oref.org.il</span>
+        <span>LIVE • 5s</span>
+      </div>
     </div>
-    <div class="safety-grid">
-      <div class="safety-card"><div style="font-size:26px">🏃</div><div style="font-size:11px;color:var(--text2);margin-top:4px">בניין רגיל</div><div style="font-size:16px;font-weight:900;color:#ca8a04;margin-top:4px">90 שנ'</div></div>
-      <div class="safety-card"><div style="font-size:26px">🏠</div><div style="font-size:11px;color:var(--text2);margin-top:4px">בית פרטי</div><div style="font-size:16px;font-weight:900;color:var(--orange);margin-top:4px">60 שנ'</div></div>
-      <div class="safety-card"><div style="font-size:26px">🌳</div><div style="font-size:11px;color:var(--text2);margin-top:4px">שטח פתוח</div><div style="font-size:16px;font-weight:900;color:var(--red);margin-top:4px">30 שנ'</div></div>
-      <div class="safety-card"><div style="font-size:26px">🚗</div><div style="font-size:11px;color:var(--text2);margin-top:4px">רכב</div><div style="font-size:16px;font-weight:900;color:#7c3aed;margin-top:4px">עצור ושכב</div></div>
+
+    <div class="sgrid">
+      <div class="scard"><div class="scard-icon">🏃</div><div class="scard-lbl">בניין רגיל</div><div class="scard-time" style="color:#f59e0b">90s</div></div>
+      <div class="scard"><div class="scard-icon">🏠</div><div class="scard-lbl">בית פרטי</div><div class="scard-time" style="color:#f97316">60s</div></div>
+      <div class="scard"><div class="scard-icon">🌳</div><div class="scard-lbl">שטח פתוח</div><div class="scard-time" style="color:var(--red)">30s</div></div>
+      <div class="scard"><div class="scard-icon">🚗</div><div class="scard-lbl">רכב</div><div class="scard-time" style="color:#a78bfa">עצור</div></div>
     </div>
-    <div class="hist-lbl">אזעקות אחרונות</div>
-    <div id="alert-history"><div class="empty" style="padding:16px"><div style="font-size:11px">טוען...</div></div></div>
+
+    <div class="hist-hdr">היסטוריית אזעקות היום</div>
+    <div id="hist-list"><div style="color:var(--text3);font-size:11px;padding:10px 0">טוען...</div></div>
   </div>
 </div>
 
+<!-- SETTINGS -->
 <div id="panel-settings" class="panel">
-  <div class="settings-wrap">
-    <div class="s-sec">
-      <div class="s-sec-ttl">התראות</div>
-      <button class="notif-btn" onclick="reqNotif()">הפעל התראות מהדפדפן 🔔</button>
-      <div class="s-card">
-        <div class="s-row"><div><div class="s-lbl">צליל אזעקה</div><div class="s-sub2">צפירה כשיש אזעקה</div></div><div class="toggle on" id="t-sound" onclick="tog('sound')"></div></div>
-        <div class="s-row"><div><div class="s-lbl">ויברציה</div><div class="s-sub2">רטט במכשיר</div></div><div class="toggle on" id="t-vibrate" onclick="tog('vibrate')"></div></div>
-        <div class="s-row col"><div class="s-lbl">עוצמת קול</div><input type="range" min="0" max="100" value="80" class="vol-slider" id="vol-slider" oninput="setVol(this.value)"></div>
+  <div class="s-wrap">
+    <div class="s-section">
+      <div class="s-hdr">התראות</div>
+      <button class="notif-btn" onclick="reqNotif()">🔔 הפעל התראות דפדפן</button>
+      <div class="s-block">
+        <div class="s-row"><div><div class="s-label">צליל אזעקה</div><div class="s-sub">צפירה כשיש אזעקה פעילה</div></div><div class="tog on" id="t-sound" onclick="tog('sound')"></div></div>
+        <div class="s-row"><div><div class="s-label">ויברציה</div><div class="s-sub">רטט חזק במצב אזעקה</div></div><div class="tog on" id="t-vib" onclick="tog('vib')"></div></div>
+        <div class="s-row col"><div class="s-label">עוצמת צליל</div><input type="range" min="0" max="100" value="80" class="vol-sl" id="vol" oninput="setV(this.value)"></div>
       </div>
-      <button class="test-btn" onclick="testAlert()">🔊 בדוק צליל אזעקה</button>
+      <button class="test-btn" onclick="testSound()">▶ בדוק צליל אזעקה</button>
     </div>
-    <div class="s-sec">
-      <div class="s-sec-ttl">עדכונים</div>
-      <div class="s-card">
-        <div class="s-row"><div><div class="s-lbl">רענון אוטומטי</div><div class="s-sub2">חדשות ואזעקות כל 5 שניות</div></div><div class="toggle on" id="t-auto" onclick="tog('auto')"></div></div>
+    <div class="s-section">
+      <div class="s-hdr">עדכונים</div>
+      <div class="s-block">
+        <div class="s-row"><div><div class="s-label">רענון אוטומטי</div><div class="s-sub">חדשות ואזעקות כל 5 שניות</div></div><div class="tog on" id="t-auto" onclick="tog('auto')"></div></div>
       </div>
     </div>
-    <div style="text-align:center;padding:16px 0 4px;font-size:11px;color:var(--text3)">
-      חדשות ישראל LIVE v2.2<br>
-      <span style="color:var(--text3)">ynet • וואלה • כאן 11 • ערוץ 12 • ערוץ 13 • ערוץ 14 • מאקו • מעריב • דובר צבא</span>
+    <div style="text-align:center;padding:18px 0 6px;font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text3);letter-spacing:1px">
+      IL NEWS v2.3 • REAL-TIME<br>
+      <span style="color:var(--text3)">ynet • walla • kan11 • ch12 • ch13 • ch14 • mako • maariv • idf</span>
     </div>
   </div>
 </div>
 
-<div id="bottom-nav">
-  <button class="nav-btn active" id="nav-news" onclick="switchTab('news',null)"><span class="nav-icon">📰</span>חדשות</button>
-  <button class="nav-btn" id="nav-alerts" onclick="switchTab('alerts',null)"><div class="nav-badge" id="alert-dot"></div><span class="nav-icon">🚨</span>אזעקות</button>
-  <button class="nav-btn" id="nav-settings" onclick="switchTab('settings',null)"><span class="nav-icon">⚙️</span>הגדרות</button>
+<!-- BOTTOM NAV -->
+<div id="bnav">
+  <button class="nbtn on" id="nb-news" onclick="goTab('news',null)"><span class="nicon">📰</span>חדשות</button>
+  <button class="nbtn" id="nb-alerts" onclick="goTab('alerts',null)"><div class="nbadge" id="abadge"></div><span class="nicon">🚨</span>אזעקות</button>
+  <button class="nbtn" id="nb-settings" onclick="goTab('settings',null)"><span class="nicon">⚙️</span>הגדרות</button>
 </div>
 
 <script>
-const S=JSON.parse(localStorage.getItem('ns2')||'{}');
-const SD={sound:true,vibrate:true,auto:true};
-const gs=k=>k in S?S[k]:SD[k];
-const ss=(k,v)=>{S[k]=v;localStorage.setItem('ns2',JSON.stringify(S))};
-function tog(k){const v=!gs(k);ss(k,v);const el=document.getElementById('t-'+k);if(el)v?el.classList.add('on'):el.classList.remove('on');if(k==='auto')v?startAuto():stopAuto()}
-['sound','vibrate','auto'].forEach(k=>{const el=document.getElementById('t-'+k);if(el)gs(k)?el.classList.add('on'):el.classList.remove('on')});
+// ── SETTINGS
+const ST=JSON.parse(localStorage.getItem('ilnews')||'{}');
+const DEF={sound:true,vib:true,auto:true};
+const gst=k=>k in ST?ST[k]:DEF[k];
+const sst=(k,v)=>{ST[k]=v;localStorage.setItem('ilnews',JSON.stringify(ST))};
+function tog(k){const v=!gst(k);sst(k,v);const e=document.getElementById('t-'+k);if(e)v?e.classList.add('on'):e.classList.remove('on');if(k==='auto')v?startAuto():stopAuto()}
+['sound','vib','auto'].forEach(k=>{const e=document.getElementById('t-'+k);if(e)gst(k)?e.classList.add('on'):e.classList.remove('on')});
 
-let allItems=[],currentSrc='all',hasAlert=false,tickIdx=0,autoTimer=null,vol=0.8,lastAlertKey='',orefFails=0,loading=false;
+// ── STATE
+let items=[],src='all',alert=false,tickI=0,timer=null,vol=0.8,lastKey='',oFails=0,busy=false;
 
-function tick(){const n=new Date();document.getElementById('clock-time').textContent=n.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});document.getElementById('clock-date').textContent=n.toLocaleDateString('he-IL',{weekday:'short',day:'numeric',month:'short'})}
-tick();setInterval(tick,1000);
+// ── CLOCK
+function clk(){const n=new Date();document.getElementById('clock').textContent=n.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+clk();setInterval(clk,1000);
 
-function rotateTicker(){if(!allItems.length)return;const el=document.getElementById('ticker-text');el.style.opacity='0';setTimeout(()=>{const item=allItems[tickIdx%Math.min(allItems.length,60)];if(item)el.textContent=item.sourceIcon+' '+item.title;el.style.opacity='1';tickIdx++},300)}
+// ── TICKER
+function rotateTicker(){
+  if(!items.length)return;
+  const el=document.getElementById('ticker-text');
+  el.style.opacity='0';
+  setTimeout(()=>{
+    const it=items[tickI%Math.min(items.length,60)];
+    if(it)el.textContent=it.sourceIcon+' '+it.title;
+    el.style.opacity='1';tickI++;
+  },400);
+}
 setInterval(rotateTicker,6000);
 
-function switchTab(tab,btn){document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));document.getElementById('panel-'+tab).classList.add('active');if(btn)btn.classList.add('active');const m={news:'nav-news',alerts:'nav-alerts',settings:'nav-settings'};if(m[tab])document.getElementById(m[tab]).classList.add('active')}
+// ── TABS
+function goTab(tab,btn){
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('on'));
+  document.getElementById('panel-'+tab).classList.add('on');
+  if(btn)btn.classList.add('on');
+  const m={news:'nb-news',alerts:'nb-alerts',settings:'nb-settings'};
+  if(m[tab])document.getElementById(m[tab]).classList.add('on');
+}
 
+// ── CHANNELS
 const CH={
-  ynet:{name:'ynet',color:'#E8001E',icon:'📰'},
-  ynet_war:{name:'ynet מלחמה',color:'#b30000',icon:'🔴'},
-  walla:{name:'וואלה',color:'#FF6B00',icon:'🔥'},
-  walla_war:{name:'וואלה ביטחון',color:'#cc5500',icon:'⚔️'},
-  maariv:{name:'מעריב',color:'#0891B2',icon:'🗞️'},
-  kan:{name:'כאן 11',color:'#2563EB',icon:'🎙️'},
-  ch12:{name:'ערוץ 12',color:'#C8102E',icon:'📺'},
-  ch13:{name:'ערוץ 13',color:'#7C3AED',icon:'📡'},
-  ch14:{name:'ערוץ 14',color:'#d97706',icon:'🦅'},
-  mako:{name:'מאקו',color:'#e11d48',icon:'🎬'},
-  idf:{name:'דובר צבא',color:'#166534',icon:'🪖'}
+  ynet:{n:'ynet',c:'#E8001E',i:'📰'},
+  ynet_war:{n:'ynet מלחמה',c:'#b30000',i:'🔴'},
+  walla:{n:'וואלה',c:'#FF6B00',i:'🔥'},
+  walla_war:{n:'וואלה ביטחון',c:'#cc5500',i:'⚔️'},
+  maariv:{n:'מעריב',c:'#0891B2',i:'🗞️'},
+  kan:{n:'כאן 11',c:'#3b82f6',i:'🎙️'},
+  ch12:{n:'ערוץ 12',c:'#C8102E',i:'📺'},
+  ch13:{n:'ערוץ 13',c:'#7C3AED',i:'📡'},
+  ch14:{n:'ערוץ 14',c:'#d97706',i:'🦅'},
+  mako:{n:'מאקו',c:'#e11d48',i:'🎬'},
+  idf:{n:'דובר צבא',c:'#22c55e',i:'🪖'},
 };
 
-function renderSrcTabs(){const el=document.getElementById('src-tabs');const sources=['all',...new Set(allItems.map(i=>i.source))];el.innerHTML='';sources.forEach(id=>{const ch=id==='all'?{name:'הכל',color:'#1a1917',icon:'🌐'}:(CH[id]||{name:id,color:'#6b7280',icon:'📰'});const b=document.createElement('button');b.className='src-btn'+(id===currentSrc?' active':'');b.textContent=ch.icon+' '+ch.name;if(id===currentSrc){b.style.background=ch.color;b.style.color='#fff';b.style.borderColor=ch.color;}b.onclick=()=>{currentSrc=id;renderSrcTabs();renderList()};el.appendChild(b)})}
-
-const seenIds=new Set();
-function renderList(){
-  const list=document.getElementById('news-list');
-  const filtered=currentSrc==='all'?allItems:allItems.filter(n=>n.source===currentSrc);
-  if(!filtered.length){list.innerHTML='<div class="empty"><div style="font-size:40px">📭</div><p style="margin-top:8px;font-weight:600">אין כתבות כרגע</p></div>';return}
-  list.innerHTML='';
-  const hdr=document.createElement('div');
-  hdr.className='section-hdr';
-  const t=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
-  hdr.innerHTML=`<span class="section-line"></span><span>עדכון ${t}</span><span class="section-line"></span>`;
-  list.appendChild(hdr);
-  filtered.forEach((item,idx)=>{
-    const ch=CH[item.source]||{name:item.source,color:'#6b7280',icon:'📰'};
-    const isNew=!seenIds.has(item.id);
-    const isBreaking=idx===0&&currentSrc==='all';
-    const a=document.createElement('a');
-    a.className='news-card'+(isBreaking?' breaking':'');
-    a.style.setProperty('--src-color',ch.color);
-    a.href=item.link||'#';a.target='_blank';a.rel='noopener';
-    a.style.animation=`fadeUp 0.18s ease ${Math.min(idx,15)*0.028}s both`;
-    a.innerHTML=`<div class="card-meta"><span class="src-tag" style="background:${ch.color}12;color:${ch.color}">${ch.icon} ${ch.name}</span><span class="card-time">${item.timeAgo}${isNew?'&nbsp;<span class="new-pill">חדש</span>':''}</span></div><div class="card-title">${item.title}</div>${item.desc?`<div class="card-desc">${item.desc}</div>`:''}`;
-    list.appendChild(a);
-    seenIds.add(item.id);
+// ── SRC PILLS
+function buildSrcRow(){
+  const el=document.getElementById('src-row');
+  const srcs=['all',...new Set(items.map(i=>i.source))];
+  el.innerHTML='';
+  srcs.forEach(id=>{
+    const ch=id==='all'?{n:'הכל',c:'#e8e8f0',i:'🌐'}:(CH[id]||{n:id,c:'#808080',i:'📰'});
+    const b=document.createElement('button');
+    b.className='spill'+(id===src?' on':'');
+    b.textContent=ch.i+' '+ch.n;
+    if(id===src){b.style.background=ch.c+'18';b.style.borderColor=ch.c+'50';b.style.color=ch.c}
+    b.onclick=()=>{src=id;buildSrcRow();buildList()};
+    el.appendChild(b);
   });
 }
 
+// ── BUILD LIST
+const seen=new Set();
+function buildList(){
+  const el=document.getElementById('news-list');
+  const list=src==='all'?items:items.filter(x=>x.source===src);
+  if(!list.length){el.innerHTML='<div class="empty-state"><div style="font-size:40px">📭</div><p style="margin-top:8px;font-size:13px">אין כתבות</p></div>';return}
+  el.innerHTML='';
+  // time separator
+  const sep=document.createElement('div');sep.className='time-sep';
+  const t=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'});
+  sep.innerHTML=`<span class="time-sep-line"></span><span>עדכון ${t}</span><span class="time-sep-line"></span>`;
+  el.appendChild(sep);
+  list.forEach((item,idx)=>{
+    const ch=CH[item.source]||{n:item.source,c:'#808080',i:'📰'};
+    const isNew=!seen.has(item.id);
+    const isTop=idx===0&&src==='all';
+    const a=document.createElement('a');
+    a.className='card'+(isTop?' top':isNew?' fresh':'');
+    a.style.setProperty('--src-c',ch.c);
+    a.href=item.link||'#';a.target='_blank';a.rel='noopener';
+    a.style.animation=`fadeUp 0.2s ease ${Math.min(idx,16)*0.025}s both`;
+    a.innerHTML=`
+      <div class="card-head">
+        <span class="src-badge" style="background:${ch.c}15;color:${ch.c}">${ch.i} ${ch.n}</span>
+        <div class="card-time-row">
+          <span class="card-time">${item.timeAgo}</span>
+          ${isNew?'<span class="new-tag">NEW</span>':''}
+        </div>
+      </div>
+      <div class="card-title">${item.title}</div>
+      ${item.desc?`<div class="card-desc">${item.desc}</div>`:''}
+    `;
+    el.appendChild(a);
+    seen.add(item.id);
+  });
+}
+
+// ── LOAD NEWS
 async function loadNews(manual=false){
-  if(loading&&!manual)return;loading=true;
-  const btn=document.getElementById('refresh-btn');const status=document.getElementById('status-text');
+  if(busy&&!manual)return;busy=true;
+  const btn=document.getElementById('rfbtn');
+  const stxt=document.getElementById('status-txt');
   if(manual){btn.disabled=true;btn.innerHTML='<span class="spin">⟳</span>'}
   try{
-    const res=await fetch('/api/news?t='+Date.now());const data=await res.json();
-    if(data.items&&data.items.length>0){
-      allItems=data.items;
-      const t=new Date(data.updated).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-      status.textContent='עודכן '+t+' • '+data.total+' כתבות';
-      renderSrcTabs();renderList();rotateTicker();
+    const r=await fetch('/api/news?t='+Date.now());
+    const d=await r.json();
+    if(d.items&&d.items.length){
+      items=d.items;
+      const t=new Date(d.updated).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      stxt.innerHTML=`✓ ${t} &nbsp;•&nbsp; ${d.total} כתבות`;
+      buildSrcRow();buildList();rotateTicker();
     }
-  }catch(e){if(manual)status.textContent='שגיאת חיבור'}
-  if(manual){btn.disabled=false;btn.innerHTML='⟳ רענן'}
-  loading=false;
+  }catch(e){if(manual)stxt.textContent='שגיאה'}
+  if(manual){btn.disabled=false;btn.textContent='⟳ REFRESH'}
+  busy=false;
 }
-function startAuto(){stopAuto();if(gs('auto'))autoTimer=setInterval(()=>loadNews(false),5000)}
-function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null}}
+function startAuto(){stopAuto();if(gst('auto'))timer=setInterval(()=>loadNews(),5000)}
+function stopAuto(){if(timer){clearInterval(timer);timer=null}}
 startAuto();
 
-function setVol(v){vol=v/100}
-document.getElementById('vol-slider').oninput=e=>setVol(e.target.value);
-function playAlertSound(){
-  if(!gs('sound'))return;
-  try{const ctx=new(window.AudioContext||window.webkitAudioContext)();[[440,.13],[880,.13],[440,.13],[880,.13],[440,.13]].forEach(([f,d],i)=>{const o=ctx.createOscillator(),g=ctx.createGain();o.connect(g);g.connect(ctx.destination);o.type='sawtooth';o.frequency.value=f;const t=ctx.currentTime+i*0.18;g.gain.setValueAtTime(vol*.4,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.start(t);o.stop(t+d)})}catch(e){}
+// ── SOUND
+function setV(v){vol=v/100}
+document.getElementById('vol').oninput=e=>setV(e.target.value);
+function playAlarm(){
+  if(!gst('sound'))return;
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [[440,.12],[880,.12],[440,.12],[880,.12],[440,.12],[880,.12]].forEach(([f,d],i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.type='sawtooth';o.frequency.value=f;
+      const t=ctx.currentTime+i*0.17;
+      g.gain.setValueAtTime(vol*.45,t);
+      g.gain.exponentialRampToValueAtTime(.001,t+d);
+      o.start(t);o.stop(t+d);
+    });
+  }catch(e){}
 }
-function testAlert(){playAlertSound();if(gs('vibrate')&&navigator.vibrate)navigator.vibrate([200,100,200])}
-async function reqNotif(){if(!('Notification'in window)){alert('הדפדפן לא תומך בהתראות');return}const p=await Notification.requestPermission();alert(p==='granted'?'התראות הופעלו!':'אנא אשר התראות בהגדרות הדפדפן')}
+function testSound(){playAlarm();if(gst('vib')&&navigator.vibrate)navigator.vibrate([200,100,200])}
+async function reqNotif(){
+  if(!('Notification'in window)){alert('הדפדפן לא תומך בהתראות');return}
+  const p=await Notification.requestPermission();
+  alert(p==='granted'?'✅ התראות הופעלו!':'⚠️ אנא אשר הרשאה בהגדרות הדפדפן');
+}
 
-function setOrefUI(ok){const dot=document.getElementById('oref-dot');dot.className='oref-dot2'+(ok?'':' grey');document.getElementById('oref-time').textContent=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
+// ── OREF STATUS UI
+function setOrefUI(state){
+  const ind=document.getElementById('oref-ind');
+  ind.className='oref-ind'+(state==='ok'?'':(state==='alert'?' alert':' offline'));
+  document.getElementById('oref-ts').textContent=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}
 
+// ── ALERTS
 async function checkAlerts(){
-  try{const res=await fetch('/api/alerts?t='+Date.now());const text=await res.text();orefFails=0;setOrefUI(true);
-    if(!text||text.trim()===''||text.trim()==='{}'){clearAlert();return}
-    const data=JSON.parse(text);
-    if(data&&data.data&&data.data.length>0)triggerAlert(data.data,data.title||'ירי רקטות',data.data.join(','));
-    else clearAlert();
-  }catch(e){orefFails++;if(orefFails>=3){const dot=document.getElementById('oref-dot');dot.className='oref-dot2 grey'}}
+  try{
+    const r=await fetch('/api/alerts?t='+Date.now());
+    const txt=await r.text();
+    oFails=0;
+    if(!txt||txt.trim()===''||txt.trim()==='{}'){setOrefUI('ok');clearAlert();return}
+    const d=JSON.parse(txt);
+    if(d&&d.data&&d.data.length>0){
+      setOrefUI('alert');
+      triggerAlert(d.data,d.title||'ירי רקטות',d.data.join(','));
+    }else{setOrefUI('ok');clearAlert()}
+  }catch(e){
+    oFails++;
+    if(oFails>=3)setOrefUI('offline');
+  }
 }
 
 function triggerAlert(areas,type,key){
   const str=Array.isArray(areas)?areas.join(' • '):areas;
-  hasAlert=true;
-  document.getElementById('alert-box').classList.add('danger');
-  document.getElementById('alert-emoji').textContent='🚨';
-  document.getElementById('alert-status').textContent='אזעקה פעילה!';
-  document.getElementById('alert-areas').textContent=str;
-  document.getElementById('alert-dot').classList.add('alert');
-  document.getElementById('oref-dot').className='oref-dot2 red';
-  document.getElementById('banner-areas').textContent=str;
-  document.getElementById('alert-banner').classList.add('show');
-  if(key!==lastAlertKey){
-    lastAlertKey=key;
-    document.getElementById('overlay-areas').textContent=str;
-    document.getElementById('overlay-type').textContent=type;
-    document.getElementById('alert-overlay').classList.add('show');
-    playAlertSound();
-    if(gs('vibrate')&&navigator.vibrate)navigator.vibrate([400,100,400,100,400,100,400]);
-    if('Notification'in window&&Notification.permission==='granted')new Notification('אזעקה — '+type,{body:str,icon:'/icon-192.png'});
+  alert=true;
+  document.getElementById('abox').classList.add('danger');
+  document.getElementById('abox-icon').textContent='🚨';
+  document.getElementById('abox-status').textContent='אזעקה פעילה!';
+  document.getElementById('abox-areas').textContent=str;
+  document.getElementById('abadge').classList.add('danger');
+  document.getElementById('strip-areas').textContent=str;
+  document.getElementById('alert-strip').classList.add('on');
+  if(key!==lastKey){
+    lastKey=key;
+    document.getElementById('o-areas').textContent=str;
+    document.getElementById('o-type').textContent=type;
+    document.getElementById('overlay').classList.add('on');
+    playAlarm();
+    if(gst('vib')&&navigator.vibrate)navigator.vibrate([500,150,500,150,500,150,500]);
+    if('Notification'in window&&Notification.permission==='granted')
+      new Notification('🚨 אזעקה — '+type,{body:str,icon:'/icon-192.png',requireInteraction:true});
   }
 }
-function clearAlert(){if(!hasAlert)return;hasAlert=false;lastAlertKey='';document.getElementById('alert-box').classList.remove('danger');document.getElementById('alert-emoji').textContent='✅';document.getElementById('alert-status').textContent='אין אזעקות כרגע';document.getElementById('alert-areas').textContent='';document.getElementById('alert-dot').classList.remove('alert');document.getElementById('alert-banner').classList.remove('show');document.getElementById('oref-dot').className='oref-dot2'}
-function dismissOverlay(){document.getElementById('alert-overlay').classList.remove('show')}
 
-async function loadHistory(){
-  try{const res=await fetch('/api/alerts/history');const data=await res.json();const el=document.getElementById('alert-history');
-    if(!Array.isArray(data)||!data.length){el.innerHTML='<div class="empty" style="padding:14px;font-size:11px">אין אזעקות היום</div>';return}
-    el.innerHTML=data.slice(0,10).map(a=>`<div class="hist-card"><div><div class="hist-loc">${a.cities||(Array.isArray(a.data)?a.data.join(', '):'')||'—'}</div><div class="hist-type2">${a.alertHeader||a.title||''}</div></div><div class="hist-t">${a.alertDate?new Date(a.alertDate).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):''}</div></div>`).join('');
+function clearAlert(){
+  if(!alert)return;alert=false;lastKey='';
+  document.getElementById('abox').classList.remove('danger');
+  document.getElementById('abox-icon').textContent='✅';
+  document.getElementById('abox-status').textContent='אין אזעקות כרגע';
+  document.getElementById('abox-areas').textContent='';
+  document.getElementById('abadge').classList.remove('danger');
+  document.getElementById('alert-strip').classList.remove('on');
+}
+function closeOverlay(){document.getElementById('overlay').classList.remove('on')}
+
+// ── HISTORY
+async function loadHist(){
+  try{
+    const r=await fetch('/api/alerts/history');
+    const d=await r.json();
+    const el=document.getElementById('hist-list');
+    if(!Array.isArray(d)||!d.length){
+      el.innerHTML='<div style="color:var(--text3);font-size:11px;padding:8px 0;font-family:JetBrains Mono,monospace">אין אזעקות היום</div>';
+      return;
+    }
+    el.innerHTML=d.slice(0,12).map(a=>`
+      <div class="hcard">
+        <div>
+          <div class="hcard-city">${a.cities||(Array.isArray(a.data)?a.data.join(', '):'')||'—'}</div>
+          <div class="hcard-type">${a.alertHeader||a.title||''}</div>
+        </div>
+        <div class="hcard-time">${a.alertDate?new Date(a.alertDate).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):''}</div>
+      </div>
+    `).join('');
   }catch(e){}
 }
 
+// ── INIT
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 loadNews(true);
 checkAlerts();setInterval(checkAlerts,5000);
-loadHistory();setInterval(loadHistory,30000);
+loadHist();setInterval(loadHist,30000);
 </script>
 </body>
-</html>
+  </html>
