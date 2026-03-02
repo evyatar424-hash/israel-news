@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="חדשות IL">
 <link rel="manifest" href="/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות IL — v4.0</title>
+<title>חדשות IL — v4.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -311,11 +311,15 @@ input[type=range]{width:100%;accent-color:var(--red)}
       <div class="s-row"><div><div class="s-main">צופר — מומלץ</div><div class="s-sub">הכי מהיר ואמין</div></div><a href="https://www.tzevaadom.co.il/" target="_blank" style="font-size:11px;color:var(--blue);font-weight:700">פתח ›</a></div>
       <div class="s-row"><div><div class="s-main">פיקוד העורף הרשמי</div><div class="s-sub">oref.org.il</div></div><a href="https://www.oref.org.il/" target="_blank" style="font-size:11px;color:var(--blue);font-weight:700">פתח ›</a></div>
     </div>
+    <div class="s-lbl">קהילה</div>
+    <div class="s-card">
+      <div class="s-row"><div><div class="s-main">קבוצת WhatsApp — אזעקות</div><div class="s-sub">עדכונים בזמן אמת בוואטסאפ</div></div><a href="https://chat.whatsapp.com/GnpGSBF4V5gKZUDXlRmtDQ?mode=gi_t" target="_blank" style="font-size:18px">💬</a></div>
+    </div>
     <div class="s-lbl">עדכונים</div>
     <div class="s-card">
       <div class="s-row"><div><div class="s-main">רענון אוטומטי</div><div class="s-sub">כל 10 שניות</div></div><div class="tgl on" id="tg-auto" onclick="tog('auto')"></div></div>
     </div>
-    <div class="s-footer">חדשות IL v4.0<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
+    <div class="s-footer">חדשות IL v4.1<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
   </div>
 </div>
 
@@ -383,7 +387,7 @@ const CH={
   haaretz:{n:'הארץ',c:'#555',i:'📜'},inn:{n:'ערוץ 7',c:'#1565c0',i:'✡️'},
   idf:{n:'דובר צבא',c:'#16a34a',i:'🪖'},
 };
-const NO_IMG=new Set(['walla','walla_w']);
+const NO_IMG=new Set(['walla','walla_w','maariv']);
 function goodImg(url,src){
   if(!url||url.length<12||NO_IMG.has(src))return false;
   const l=url.toLowerCase();
