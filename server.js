@@ -21,10 +21,12 @@ const CHANNELS = [
   { id:'ynet_war', name:'ynet מלחמה',   color:'#ff4444', icon:'🔴', url:'https://www.ynet.co.il/Integration/StoryRss2784.xml',                     limit:4 },
   { id:'walla',    name:'וואלה',        color:'#FF6B00', icon:'🔥', url:'https://rss.walla.co.il/feed/22',                                          limit:3 },
   { id:'walla_w',  name:'וואלה ביטחון', color:'#cc5500', icon:'⚔️', url:'https://rss.walla.co.il/feed/2686',                                       limit:3 },
-  { id:'kan',      name:'כאן 11',       color:'#2563EB', icon:'🎙️', url:'https://www.kan.org.il/Rss/RssKan.aspx?CatId=30',                         limit:4 },
-  { id:'ch12',     name:'ערוץ 12',      color:'#C8102E', icon:'📺', url:'https://rcs.mako.co.il/rss/31750a2610f26110VgnVCM2000002a0c10acRCRD.xml', limit:4 },
-  { id:'ch13',     name:'ערוץ 13',      color:'#7C3AED', icon:'📡', url:'https://13tv.co.il/rss/news/',                                             limit:4 },
-  { id:'ch14',     name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://www.now14.co.il/feed/',                                            limit:4 },
+  { id:'kan',      name:'כאן 11',       color:'#2563EB', icon:'🎙️', url:'https://www.kan.org.il/Rss/RssKan.aspx?CatId=30',                         limit:5 },
+  { id:'kan_news', name:'כאן חדשות',    color:'#1a56db', icon:'📻', url:'https://www.kan.org.il/Rss/RssKan.aspx?CatId=2',                            limit:4 },
+  { id:'ch12',     name:'ערוץ 12',      color:'#C8102E', icon:'📺', url:'https://rcs.mako.co.il/rss/31750a2610f26110VgnVCM2000002a0c10acRCRD.xml', limit:5 },
+  { id:'ch12b',    name:'n12 חדשות',    color:'#aa0000', icon:'🔴', url:'https://www.n12.co.il/rss',                                                 limit:4 },
+  { id:'ch13',     name:'ערוץ 13',      color:'#7C3AED', icon:'📡', url:'https://13tv.co.il/rss/news/',                                             limit:5 },
+  { id:'ch14',     name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://www.now14.co.il/feed/',                                            limit:5 },
   { id:'mako',     name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://rcs.mako.co.il/rss/news-new.xml',                                  limit:3 },
   { id:'maariv',   name:'מעריב',        color:'#0891B2', icon:'🗞️', url:'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',                   limit:4 },
   { id:'haaretz',  name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/htz-rss',                                    limit:3 },
@@ -33,15 +35,30 @@ const CHANNELS = [
 ];
 
 // Block known logo/placeholder images
-const BAD_PATTERNS = ['mivzakim','/logo','placeholder','noimage','no-image','RenderImage','walla.co.il/rb/','breaking_news','brand','favicon'];
-function isRealImage(url) {
+const BAD_PATTERNS = [
+  'mivzakim', '/logo', 'placeholder', 'noimage', 'no-image',
+  'RenderImage', 'walla.co.il/rb/', 'breaking_news', 'brand', 'favicon',
+  // Walla breaking logo: img.walla.co.il/v2/image/... with specific logo IDs
+  '2907054','2907055','2907056','2907057','2907058','2907059', // known walla logo IDs
+];
+
+// Sources that NEVER have real images — skip image entirely
+const NO_IMAGE_SOURCES = new Set(['walla', 'walla_w', 'maariv']);
+
+function isRealImage(url, sourceId) {
   if (!url || url.length < 12) return false;
+  if (sourceId && NO_IMAGE_SOURCES.has(sourceId)) return false;
   const l = url.toLowerCase();
   for (const p of BAD_PATTERNS) if (l.includes(p.toLowerCase())) return false;
+  // Walla blue mivzakim logo check — their logo image is always the same file
+  if (url.includes('walla') && url.includes('/image/') && url.includes('2')) {
+    // If URL ends with known logo dimensions query or has no descriptive path
+    if (/\/image\/\d{7}/.test(url) && url.length < 80) return false;
+  }
   return true;
 }
 
-function extractImage(item) {
+function extractImage(item, sourceId) {
   try {
     const candidates = [];
     if (item['media:content']?.$?.url) candidates.push(item['media:content'].$.url);
@@ -50,7 +67,7 @@ function extractImage(item) {
     const html = item.content || item['content:encoded'] || item.summary || '';
     const m = html.match(/<img[^>]+src=["']([^"']{20,})["']/);
     if (m) candidates.push(m[1]);
-    for (const c of candidates) if (isRealImage(c)) return c;
+    for (const c of candidates) if (isRealImage(c, sourceId)) return c;
   } catch(e) {}
   return null;
 }
@@ -75,7 +92,7 @@ async function fetchChannel(ch) {
       title: (item.title || '').replace(/<[^>]+>/g, '').trim(),
       desc: (item.contentSnippet || item.summary || '').replace(/<[^>]+>/g, '').trim().slice(0, 200),
       link: item.link || '',
-      image:(ch.id==='walla'||ch.id==='walla_w') ? null : extractImage(item), null : extractImage(item),
+      image: extractImage(item, ch.id),
       timeAgo: timeAgo(item.pubDate || item.isoDate),
       ts: new Date(item.pubDate || item.isoDate).getTime() || (Date.now() - i * 60000)
     }));
@@ -206,20 +223,9 @@ app.get('/api/alerts', (req, res) => {
   res.json({ alert: currentAlert, connected: tzofarConnected });
 });
 
-// History — try oref first, fall back to local
+// History — local cache (populated by Tzofar WebSocket)
 app.get('/api/alerts/history', (req, res) => {
-  const r = https.get({ hostname:'www.oref.org.il', path:'/WarningMessages/History/AlertsHistory.json', timeout:5000,
-    headers:{'Referer':'https://www.oref.org.il/','User-Agent':'Mozilla/5.0'} },
-    (resp) => {
-      let d = '';
-      resp.on('data', c => d += c);
-      resp.on('end', () => {
-        try { const p = JSON.parse(d); if (Array.isArray(p) && p.length) { res.json(p); return; } } catch(e) {}
-        res.json(alertHistory);
-      });
-    });
-  r.on('error', () => res.json(alertHistory));
-  r.on('timeout', () => { r.destroy(); res.json(alertHistory); });
+  res.json(alertHistory);
 });
 
 app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected }));
