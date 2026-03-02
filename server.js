@@ -75,7 +75,7 @@ async function fetchChannel(ch) {
       title: (item.title || '').replace(/<[^>]+>/g, '').trim(),
       desc: (item.contentSnippet || item.summary || '').replace(/<[^>]+>/g, '').trim().slice(0, 200),
       link: item.link || '',
-      image: extractImage(item),
+      image: image: (ch.id === 'walla' || ch.id === 'walla_w') ? null : extractImage(item),
       timeAgo: timeAgo(item.pubDate || item.isoDate),
       ts: new Date(item.pubDate || item.isoDate).getTime() || (Date.now() - i * 60000)
     }));
