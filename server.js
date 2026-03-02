@@ -4,6 +4,8 @@ const cors = require('cors');
 const https = require('https');
 const http = require('http');
 const path = require('path');
+const WebSocket = require('ws');
+const fetch = (...args) => import('node-fetch').then(({default: f}) => f(...args));
 
 const app = express();
 app.use(cors());
@@ -36,25 +38,27 @@ const CHANNELS = [
   { id:'idf',      name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://www.idf.il/rss/',                                                    limit:3 },
 ];
 
-// Known logo/placeholder image patterns to block
+// Image block: bad patterns + bad source domains
 const BAD_IMG_PATTERNS = [
-  'mivzakim', 'logo', 'placeholder', 'default', 'noimage', 'no-image',
-  'breaking', 'generic', 'walla-logo', 'brand', 'icon', 'favicon',
-  'walla_logo', 'mako-logo', 'ynet-logo', 'avatar', 'profile'
+  'mivzakim', '/logo', 'placeholder', 'default', 'noimage', 'no-image',
+  'breaking', 'generic', 'brand', 'favicon', 'avatar', 'profile',
+  'walla.co.il/RenderImage', // walla's logo renderer
+  'breaking_news', 'bkn_'
+];
+
+// Walla uses img.walla.co.il/RenderImage?... for logos — block entire domain pattern
+const BAD_IMG_DOMAINS = [
+  /img\.walla\.co\.il\/RenderImage/,
+  /walla\.co\.il\/rb\//,
 ];
 
 function isRealImage(url) {
-  if (!url) return false;
+  if (!url || url.length < 10) return false;
   const lower = url.toLowerCase();
-  // Block known bad patterns
-  for (const p of BAD_IMG_PATTERNS) {
-    if (lower.includes(p)) return false;
-  }
-  // Must look like a real photo URL (jpg, jpeg, png, webp, gif)
-  if (!/\.(jpe?g|png|webp|gif)(\?|$)/i.test(url) && !url.includes('image') && !url.includes('photo') && !url.includes('img')) {
-    // Still allow CDN-style URLs that don't have extension
-    if (!url.includes('cdn') && !url.includes('media') && !url.includes('upload')) return false;
-  }
+  for (const p of BAD_IMG_PATTERNS) if (lower.includes(p.toLowerCase())) return false;
+  for (const rx of BAD_IMG_DOMAINS) if (rx.test(url)) return false;
+  // Walla breaking news image — their square blue logo
+  if (url.includes('walla') && url.includes('RenderImage')) return false;
   return true;
 }
 
@@ -122,58 +126,173 @@ app.get('/api/news', async (req, res) => {
   res.json({ items: newsCache, updated: new Date(cacheTime).toISOString(), total: newsCache.length });
 });
 
-// ─── ALERTS: dual source — oref + fallback ───
-// oref.org.il only works from Israeli IPs (Render is USA)
-// We try it, and also expose a manual test endpoint
+// ─── AI PROXY — so API key isn't exposed in browser ───
+app.post('/api/ai/summarize', express.json(), async (req, res) => {
+  const { title, desc } = req.body || {};
+  if (!title) { res.json({ text: '—' }); return; }
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY || '',
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        system: 'אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה.',
+        messages: [{ role: 'user', content: `${title}\n${desc || ''}` }]
+      })
+    });
+    const data = await response.json();
+    const text = data?.content?.[0]?.text || '—';
+    res.json({ text });
+  } catch(e) {
+    res.json({ text: 'שגיאת חיבור.' });
+  }
+});
+
+// oref history helper (works even geo-blocked, history is less strict)
 function fetchOref(path, cb) {
   const req = https.get({
-    hostname: 'www.oref.org.il',
-    path,
-    timeout: 6000,
-    headers: {
-      'Referer': 'https://www.oref.org.il/',
-      'X-Requested-With': 'XMLHttpRequest',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      'Accept': 'application/json, text/plain, */*',
-      'Accept-Language': 'he-IL,he;q=0.9',
-    }
-  }, res => {
-    let d = '';
-    res.on('data', c => d += c);
-    res.on('end', () => cb(null, d, res.statusCode));
-  });
+    hostname: 'www.oref.org.il', path, timeout: 6000,
+    headers: { 'Referer': 'https://www.oref.org.il/', 'X-Requested-With': 'XMLHttpRequest', 'User-Agent': 'Mozilla/5.0' }
+  }, res => { let d=''; res.on('data',c=>d+=c); res.on('end',()=>cb(null,d)); });
   req.on('error', err => cb(err));
   req.on('timeout', () => { req.destroy(); cb(new Error('timeout')); });
 }
 
-app.get('/api/alerts', (req, res) => {
-  fetchOref('/WarningMessages/alert/alerts.json', (err, data, status) => {
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('X-Oref-Status', status || 'error');
-    if (err) { res.json({ error: err.message, geo_blocked: true }); return; }
-    res.send(data || '{}');
+// ─── ALERTS: Tzofar WebSocket (works worldwide, no geo-block) ───
+const WebSocket = require('ws');
+
+let currentAlert = null; // { data, title, id, ts }
+let alertHistory = [];
+let tzofarWs = null;
+let tzofarConnected = false;
+
+function connectTzofar() {
+  try {
+    if (tzofarWs) { try { tzofarWs.terminate(); } catch(e) {} }
+    console.log('Connecting to Tzofar WebSocket...');
+    tzofarWs = new WebSocket('wss://ws.tzevaadom.co.il/socket?platform=WEB', {
+      headers: {
+        'Origin': 'https://www.tzevaadom.co.il',
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15'
+      }
+    });
+
+    tzofarWs.on('open', () => {
+      tzofarConnected = true;
+      console.log('Tzofar connected ✓');
+    });
+
+    tzofarWs.on('message', (raw) => {
+      try {
+        const msg = JSON.parse(raw.toString());
+        console.log('Tzofar msg:', JSON.stringify(msg).slice(0, 200));
+
+        // Tzofar sends: { type: 'ALERT', notification: { cities: [...], threat: '...', ... } }
+        // or: { type: 4, ... } (raw pikud haoref format)
+        if (msg.type === 'ALERT' || msg.type === 'alert') {
+          const cities = msg.notification?.cities || msg.cities || msg.data || [];
+          const title = msg.notification?.threat || msg.title || 'ירי רקטות';
+          currentAlert = { data: Array.isArray(cities) ? cities : [cities], title, id: Date.now().toString(), ts: Date.now() };
+          // Add to history
+          alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
+          if (alertHistory.length > 50) alertHistory = alertHistory.slice(0, 50);
+          broadcastAlert(currentAlert);
+        } else if (msg.type === 'ALL_CLEAR' || msg.type === 'clear') {
+          currentAlert = null;
+          broadcastAlert(null);
+        }
+        // Handle raw pikud format: { id, cat, title, data: [...] }
+        if (msg.id && msg.data && Array.isArray(msg.data) && msg.data.length > 0) {
+          currentAlert = { data: msg.data, title: msg.title || 'ירי רקטות', id: msg.id, ts: Date.now() };
+          alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
+          if (alertHistory.length > 50) alertHistory = alertHistory.slice(0, 50);
+          broadcastAlert(currentAlert);
+        }
+      } catch(e) { console.log('Tzofar parse err:', e.message); }
+    });
+
+    tzofarWs.on('close', () => {
+      tzofarConnected = false;
+      console.log('Tzofar disconnected, reconnecting in 10s...');
+      setTimeout(connectTzofar, 10000);
+    });
+
+    tzofarWs.on('error', (e) => {
+      tzofarConnected = false;
+      console.log('Tzofar error:', e.message);
+      setTimeout(connectTzofar, 15000);
+    });
+
+    // Keepalive ping every 60s
+    setInterval(() => {
+      if (tzofarWs && tzofarWs.readyState === WebSocket.OPEN) {
+        tzofarWs.ping();
+      }
+    }, 60000);
+
+  } catch(e) {
+    console.log('Tzofar connect failed:', e.message);
+    setTimeout(connectTzofar, 15000);
+  }
+}
+connectTzofar();
+
+// SSE clients list
+const sseClients = new Set();
+function broadcastAlert(alert) {
+  const data = JSON.stringify({ alert, ts: Date.now() });
+  sseClients.forEach(res => {
+    try { res.write(`data: ${data}\n\n`); } catch(e) { sseClients.delete(res); }
   });
+}
+
+// SSE endpoint — client subscribes once, gets pushed alerts in real-time
+app.get('/api/alerts/stream', (req, res) => {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.flushHeaders();
+  // Send current state immediately
+  res.write(`data: ${JSON.stringify({ alert: currentAlert, ts: Date.now(), connected: tzofarConnected })}\n\n`);
+  sseClients.add(res);
+  req.on('close', () => sseClients.delete(res));
+});
+
+// Polling fallback (for clients that don't support SSE)
+app.get('/api/alerts', (req, res) => {
+  res.json({ alert: currentAlert, connected: tzofarConnected, ts: Date.now() });
 });
 
 app.get('/api/alerts/history', (req, res) => {
+  // Try oref history first, fall back to local
   fetchOref('/WarningMessages/History/AlertsHistory.json', (err, data) => {
-    res.setHeader('Content-Type', 'application/json');
-    if (err) { res.json([]); return; }
-    try {
-      const parsed = JSON.parse(data);
-      res.json(Array.isArray(parsed) ? parsed : []);
-    } catch(e) { res.json([]); }
+    if (!err) {
+      try {
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed) && parsed.length > 0) { res.json(parsed); return; }
+      } catch(e) {}
+    }
+    res.json(alertHistory);
   });
 });
 
-// Debug endpoint — shows raw oref response
-app.get('/api/debug/alerts', (req, res) => {
-  fetchOref('/WarningMessages/alert/alerts.json', (err, data, status) => {
-    res.json({ err: err?.message, status, data, time: new Date().toISOString() });
-  });
-});
 
-app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, cacheAge: Date.now() - cacheTime }));
+// AI summary proxy — avoids CORS, hides key server-side
+app.post('/api/ai/summarize', async (req, res) => {
+  const { title, desc } = req.body || {};
+  if (!title) return res.json({ text: '—' });
+  try {
+    const response = await new Promise((resolve, reject) => {
+      const body = JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 120,
+        system: 'אתה עורך חדשות ישראלי קצר ומקצועי. כ
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
