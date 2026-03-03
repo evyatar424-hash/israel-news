@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="חדשות IL">
 <link rel="manifest" href="/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות IL — v4.1</title>
+<title>חדשות IL — v4.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -244,14 +244,6 @@ input[type=range]{width:100%;accent-color:var(--red)}
 <!-- NEWS -->
 <div id="panel-news" class="panel on">
   <div id="hero"></div>
-  <div class="live-row">
-    <div class="lc" onclick="openLive('https://www.kan.org.il/live/','כאן 11')"><div class="lc-box">🎙️<div class="lc-live">LIVE</div></div><div class="lc-lbl">כאן 11</div></div>
-    <div class="lc" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','ערוץ 12')"><div class="lc-box">📺<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 12</div></div>
-    <div class="lc" onclick="openLive('https://13tv.co.il/live/','ערוץ 13')"><div class="lc-box">📡<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 13</div></div>
-    <div class="lc" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')"><div class="lc-box">🦅<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 14</div></div>
-    <a class="lc" href="https://glglz.maariv.co.il/" target="_blank"><div class="lc-box">📻<div class="lc-live">LIVE</div></div><div class="lc-lbl">גלגלצ</div></a>
-    <a class="lc" href="https://glz.co.il/" target="_blank"><div class="lc-box">🎖️<div class="lc-live">LIVE</div></div><div class="lc-lbl">גלצ</div></a>
-  </div>
   <div id="player">
     <div class="pl-bar">
       <span class="pl-name" id="pl-name">שידור חי</span>
@@ -264,34 +256,78 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <button id="rfbtn" onclick="loadNews(true)">⟳ רענן</button>
   </div>
   <div class="chips" id="chips"></div>
+  <div class="live-row">
+    <div class="lc" onclick="openLive('https://www.kan.org.il/live/','כאן 11')"><div class="lc-box">🎙️<div class="lc-live">LIVE</div></div><div class="lc-lbl">כאן 11</div></div>
+    <div class="lc" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','ערוץ 12')"><div class="lc-box">📺<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 12</div></div>
+    <div class="lc" onclick="openLive('https://13tv.co.il/live/','ערוץ 13')"><div class="lc-box">📡<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 13</div></div>
+    <div class="lc" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')"><div class="lc-box">🦅<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 14</div></div>
+    <a class="lc" href="https://glglz.maariv.co.il/" target="_blank"><div class="lc-box">📻<div class="lc-live">LIVE</div></div><div class="lc-lbl">גלגלצ</div></a>
+    <a class="lc" href="https://glz.co.il/" target="_blank"><div class="lc-box">🎖️<div class="lc-live">LIVE</div></div><div class="lc-lbl">גלצ</div></a>
+  </div>
   <div id="nlist"><div class="empty"><div class="empty-ico">📡</div><div class="empty-txt">טוען חדשות...</div></div></div>
 </div>
 
 <!-- ALERTS -->
 <div id="panel-alerts" class="panel">
-  <div class="a-wrap">
+  <!-- STATUS UNAVAILABLE STATE -->
+  <div id="a-unavail" style="display:none;padding:20px 12px">
+    <div style="background:linear-gradient(135deg,rgba(255,53,53,.08),transparent);border:1.5px solid rgba(255,53,53,.25);border-radius:20px;padding:28px 20px;text-align:center">
+      <div style="font-size:48px;margin-bottom:12px">📡</div>
+      <div style="font-size:17px;font-weight:900;color:var(--t);margin-bottom:8px">מערכת אזעקות</div>
+      <div style="font-size:13px;color:var(--t2);line-height:1.8;margin-bottom:16px">הסרבר נמצא ב-Render free tier<br>ומתנתק כל 15 דקות.<br>לאזעקות בזמן אמת השתמש ב:</div>
+      <a href="https://www.tzevaadom.co.il/" target="_blank" style="display:block;background:var(--red);color:#fff;font-weight:900;font-size:14px;padding:14px;border-radius:12px;margin-bottom:8px;text-decoration:none">🚨 פתח צופר — tzevaadom.co.il</a>
+      <a href="https://chat.whatsapp.com/GnpGSBF4V5gKZUDXlRmtDQ?mode=gi_t" target="_blank" style="display:block;background:rgba(37,211,102,.15);color:#25d366;font-weight:900;font-size:14px;padding:14px;border-radius:12px;text-decoration:none;border:1px solid rgba(37,211,102,.3)">💬 קבוצת WhatsApp — עדכונים</a>
+    </div>
+
+    <!-- SHELTER TIMES always visible -->
+    <div style="margin-top:14px">
+      <div class="hist-hdr" style="margin-bottom:10px">⏱ זמני הגנה לפי סוג מבנה</div>
+      <div class="sh-grid">
+        <div class="sh"><div class="sh-ico">🏃</div><div class="sh-lbl">בניין רגיל</div><div class="sh-val" style="color:#f59e0b">90 שנ'</div></div>
+        <div class="sh"><div class="sh-ico">🏠</div><div class="sh-lbl">בית פרטי</div><div class="sh-val" style="color:#f97316">60 שנ'</div></div>
+        <div class="sh"><div class="sh-ico">🌳</div><div class="sh-lbl">שטח פתוח</div><div class="sh-val" style="color:var(--red)">30 שנ'</div></div>
+        <div class="sh"><div class="sh-ico">🚗</div><div class="sh-lbl">רכב</div><div class="sh-val" style="color:#a78bfa">עצור ושכב</div></div>
+      </div>
+    </div>
+
+    <!-- INSTRUCTIONS -->
+    <div style="margin-top:6px;background:var(--card);border:1px solid var(--b);border-radius:14px;overflow:hidden">
+      <div style="padding:12px 16px;border-bottom:1px solid var(--b);font-size:11px;font-weight:800;color:var(--t3);letter-spacing:1px;text-transform:uppercase">מה לעשות באזעקה</div>
+      <div style="padding:14px 16px;display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:22px;line-height:1">1️⃣</span><div style="font-size:12px;color:var(--t2);line-height:1.6"><strong style="color:var(--t)">שמע אזעקה?</strong> אל תחכה — רוץ מיידית למרחב המוגן הקרוב</div></div>
+        <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:22px;line-height:1">2️⃣</span><div style="font-size:12px;color:var(--t2);line-height:1.6"><strong style="color:var(--t)">סגור דלתות וחלונות</strong> ושמור על שקט — הימנע משימוש בטלפון</div></div>
+        <div style="display:flex;align-items:flex-start;gap:12px"><span style="font-size:22px;line-height:1">3️⃣</span><div style="font-size:12px;color:var(--t2);line-height:1.6"><strong style="color:var(--t)">הישאר במרחב</strong> לפחות 10 דקות לאחר סיום האזעקה</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- LIVE STATE (shown when server is awake) -->
+  <div id="a-live-wrap" style="display:none;padding:10px 12px">
     <div class="a-status">
       <div class="a-ind" id="a-ind"></div>
-      <div>
+      <div style="flex:1">
         <div class="a-name">צופר — אזעקות בזמן אמת</div>
-        <div class="a-sub">מחובר ל-Tzofar WebSocket</div>
+        <div class="a-sub" id="a-sub-txt">מחבר...</div>
       </div>
-      <span id="a-ts">--:--</span>
+      <span id="a-ts" style="font-size:9px;color:var(--t3)">--:--</span>
     </div>
+
     <div class="a-main" id="a-main">
-      <div id="a-ico">✅</div>
-      <div id="a-stat">אין אזעקות כרגע</div>
-      <div id="a-areas"></div>
-      <div class="a-src-row"><span class="a-chip-g">tzevaadom.co.il</span><span class="a-chip-t">עדכון בזמן אמת</span></div>
+      <div id="a-ico" style="font-size:56px;margin-bottom:10px;transition:all .3s">✅</div>
+      <div id="a-stat" style="font-size:19px;font-weight:900;color:var(--green)">אין אזעקות כרגע</div>
+      <div id="a-areas" style="font-size:13px;font-weight:700;color:#ff9999;margin-top:8px;line-height:2"></div>
+      <div class="a-src-row"><span class="a-chip-g">tzevaadom.co.il</span><span class="a-chip-t">WebSocket חי</span></div>
     </div>
+
     <div class="sh-grid">
       <div class="sh"><div class="sh-ico">🏃</div><div class="sh-lbl">בניין רגיל</div><div class="sh-val" style="color:#f59e0b">90 שנ'</div></div>
       <div class="sh"><div class="sh-ico">🏠</div><div class="sh-lbl">בית פרטי</div><div class="sh-val" style="color:#f97316">60 שנ'</div></div>
       <div class="sh"><div class="sh-ico">🌳</div><div class="sh-lbl">שטח פתוח</div><div class="sh-val" style="color:var(--red)">30 שנ'</div></div>
       <div class="sh"><div class="sh-ico">🚗</div><div class="sh-lbl">רכב</div><div class="sh-val" style="color:#a78bfa">עצור ושכב</div></div>
     </div>
+
     <div class="hist-hdr">אזעקות שהתקבלו</div>
-    <div id="hlist"><div style="font-size:11px;color:var(--t3);padding:4px 0;line-height:1.9">📡 ממתין לאזעקות מ-Tzofar.<br>אזעקות שיגיעו יופיעו כאן.</div></div>
+    <div id="hlist"><div style="font-size:11px;color:var(--t3);padding:4px 0;line-height:1.9">📡 ממתין לאזעקות.<br>אזעקות שיגיעו יופיעו כאן בזמן אמת.</div></div>
   </div>
 </div>
 
@@ -319,7 +355,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <div class="s-card">
       <div class="s-row"><div><div class="s-main">רענון אוטומטי</div><div class="s-sub">כל 10 שניות</div></div><div class="tgl on" id="tg-auto" onclick="tog('auto')"></div></div>
     </div>
-    <div class="s-footer">חדשות IL v4.1<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
+    <div class="s-footer">חדשות IL v4.2<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
   </div>
 </div>
 
@@ -423,16 +459,29 @@ function buildChips(){
 }
 
 // AI summarize
-async function aiSum(btn,title,desc){
+async function aiSum(btn){
+  const title=btn._t||'';
+  const desc=btn._d||'';
   btn.style.display='none';
   const box=btn.nextElementSibling;
   box.classList.add('on');
   box.innerHTML='<span class="spinner">⟳</span> מנתח...';
   try{
-    const r=await fetch('/api/ai/summarize',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({title,desc})});
+    const r=await fetch('/api/ai/summarize',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({title,desc}),
+      signal:AbortSignal.timeout(12000)
+    });
     const d=await r.json();
-    box.textContent=d.text||'—';
-  }catch(e){box.textContent='לא זמין כרגע.';}
+    if(d.text&&d.text!=='—'&&!d.text.includes('API key')){
+      box.textContent=d.text;
+    }else{
+      box.innerHTML='<span style="color:var(--amber)">⚙️ יש להגדיר ANTHROPIC_API_KEY בסביבת Render</span>';
+    }
+  }catch(e){
+    box.innerHTML='<span style="color:var(--t3)">לא זמין כרגע</span>';
+  }
 }
 
 // News cards
@@ -451,12 +500,21 @@ function buildList(){
     const a=document.createElement('a');
     a.className='nc';a.href=item.link||'#';a.target='_blank';a.rel='noopener';
     a.style.animationDelay=Math.min(i,12)*0.028+'s';
-    const title=item.title.replace(/'/g,"\\'");
-    const desc=(item.desc||'').replace(/'/g,"\\'");
-    a.innerHTML='<div class="nc-bar" style="background:'+ch.c+'"></div>'+(hi?'<img class="nc-img" src="'+item.image+'" alt="" loading="lazy" onerror="this.remove()">'  :'')+
+    a.innerHTML='<div class="nc-bar" style="background:'+ch.c+'"></div>'+(hi?'<img class="nc-img" src="'+item.image+'" alt="" loading="lazy" onerror="this.remove()">':'')+
       '<div class="nc-body"><div class="nc-top"><span class="nc-src" style="background:'+ch.c+'18;color:'+ch.c+'">'+ch.i+' '+ch.n+'</span><div class="nc-right"><span class="nc-time">'+item.timeAgo+'</span>'+(isNew?'<span class="nc-new">חדש</span>':'')+'</div></div>'+
       '<div class="nc-title">'+item.title+'</div>'+(item.desc?'<div class="nc-desc">'+item.desc+'</div>':'')+
-      '<button class="ai-btn" onclick="event.preventDefault();event.stopPropagation();aiSum(this,\''+title+'\',\''+desc+'\')">🤖 תמצית AI</button><div class="ai-result"></div></div>';
+      '</div>';
+    // AI button attached via JS to avoid quote escaping
+    const aib=document.createElement('button');
+    aib.className='ai-btn';
+    aib._t=item.title;
+    aib._d=item.desc||'';
+    aib.textContent='🤖 תמצית AI';
+    aib.addEventListener('click',function(ev){ev.preventDefault();ev.stopPropagation();aiSum(this);});
+    const air=document.createElement('div');
+    air.className='ai-result';
+    a.querySelector('.nc-body').appendChild(aib);
+    a.querySelector('.nc-body').appendChild(air);
     el.appendChild(a);seen.add(item.id);
   });
 }
@@ -551,31 +609,90 @@ function renderHist(){
   el.innerHTML=histItems.map(a=>'<div class="hist-item"><div><div class="hist-c">'+(Array.isArray(a.data)?a.data.join(', '):(a.cities||'—'))+'</div><div class="hist-ty">'+(a.title||'')+'</div></div><div class="hist-t">'+(a.alertDate?new Date(a.alertDate).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):'')+'</div></div>').join('');
 }
 
+// ── Alert panel state: unavail vs live ──
+let alertServerReachable = false;
+let sseRetries = 0;
+
+function showAlertPanel(state){
+  // state: 'loading' | 'unavail' | 'live'
+  const u = document.getElementById('a-unavail');
+  const l = document.getElementById('a-live-wrap');
+  if(!u||!l) return;
+  if(state === 'unavail'){ u.style.display='block'; l.style.display='none'; }
+  else if(state === 'live'){ u.style.display='none'; l.style.display='block'; }
+  else { u.style.display='none'; l.style.display='none'; }
+}
+
+function setConn(s){
+  const e=document.getElementById('a-ind');
+  if(e) e.className='a-ind'+(s==='ok'?' ok':s==='alrt'?' alrt':'');
+  const sub=document.getElementById('a-sub-txt');
+  if(sub){
+    if(s==='ok') sub.textContent='מחובר — ממתין לאזעקות';
+    else if(s==='alrt') sub.textContent='⚠️ אזעקה פעילה!';
+    else sub.textContent='מחבר מחדש...';
+  }
+  const ts=document.getElementById('a-ts');
+  if(ts) ts.textContent=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(s==='ok'||s==='alrt'){
+    alertServerReachable=true;
+    showAlertPanel('live');
+  }
+}
+
 // SSE stream
 function connectStream(){
   try{
     const es=new EventSource('/api/alerts/stream');
-    es.onopen=()=>setConn('ok');
+    const timeout=setTimeout(()=>{ es.close(); showAlertPanel('unavail'); setTimeout(connectStream,12000); },8000);
+    es.onopen=()=>{
+      clearTimeout(timeout);
+      sseRetries=0;
+      setConn('ok');
+    };
     es.onmessage=e=>{
+      clearTimeout(timeout);
       try{
         const d=JSON.parse(e.data);
-        if(d.connected!==undefined)setConn(d.connected?'ok':'err');
-        if(d.alert&&d.alert.data&&d.alert.data.length>0){setConn('alrt');triggerAlert(d.alert.data,d.alert.title||'ירי רקטות',d.alert.id||d.alert.data.join(','));}
-        else if(d.alert===null){setConn('ok');clearAlertUI();}
+        if(d.connected!==undefined) setConn(d.connected?'ok':'err');
+        if(d.alert&&d.alert.data&&d.alert.data.length>0){
+          setConn('alrt');
+          triggerAlert(d.alert.data,d.alert.title||'ירי רקטות',d.alert.id||d.alert.data.join(','));
+        } else if(d.alert===null){
+          setConn('ok');clearAlertUI();
+        }
       }catch(err){}
     };
-    es.onerror=()=>{setConn('err');es.close();setTimeout(connectStream,8000);};
-  }catch(e){setConn('err');}
+    es.onerror=()=>{
+      clearTimeout(timeout);
+      sseRetries++;
+      setConn('err');
+      es.close();
+      if(sseRetries >= 2) showAlertPanel('unavail');
+      setTimeout(connectStream, Math.min(8000*sseRetries,30000));
+    };
+  }catch(e){
+    showAlertPanel('unavail');
+    setTimeout(connectStream,15000);
+  }
 }
+
 function pollOnce(){
-  fetch('/api/alerts').then(r=>r.json()).then(d=>{
-    if(d.alert&&d.alert.data&&d.alert.data.length>0){setConn('alrt');triggerAlert(d.alert.data,d.alert.title||'ירי רקטות',d.alert.id||d.alert.data.join(','));}
-    else setConn(d.connected?'ok':'err');
-  }).catch(()=>setConn('err'));
+  fetch('/api/alerts',{signal:AbortSignal.timeout(5000)})
+    .then(r=>r.json())
+    .then(d=>{
+      setConn(d.connected?'ok':'err');
+      if(d.alert&&d.alert.data&&d.alert.data.length>0){
+        setConn('alrt');
+        triggerAlert(d.alert.data,d.alert.title||'ירי רקטות',d.alert.id||d.alert.data.join(','));
+      }
+    }).catch(()=>{ /* SSE handles state */ });
 }
 
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 loadNews(true);
+// Start alert panel in unavail, SSE will switch to live if server responds
+showAlertPanel('unavail');
 connectStream();
 pollOnce();
 </script>
