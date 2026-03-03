@@ -83,9 +83,27 @@ function timeAgo(d) {
   } catch(e) { return ''; }
 }
 
+// Proxy wrapper for channels that block US IPs (12/13/14)
+async function fetchWithProxy(url) {
+  // Try direct first, fall back to allorigins proxy
+  try {
+    const feed = await parser.parseURL(url);
+    return feed;
+  } catch(e) {
+    // Fallback: allorigins.win CORS proxy
+    const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+    return await parser.parseURL(proxyUrl);
+  }
+}
+
+const PROXY_CHANNELS = new Set(['ch12','ch12b','ch13','ch14','kan','kan_news']);
+
 async function fetchChannel(ch) {
   try {
-    const feed = await parser.parseURL(ch.url);
+    const feed = PROXY_CHANNELS.has(ch.id)
+      ? await fetchWithProxy(ch.url)
+      : await parser.parseURL(ch.url);
+    if (!feed || !feed.items) return [];
     return (feed.items || []).slice(0, ch.limit || 5).map((item, i) => ({
       id: ch.id + '_' + (item.guid || item.link || i),
       source: ch.id, sourceName: ch.name, sourceColor: ch.color, sourceIcon: ch.icon,
