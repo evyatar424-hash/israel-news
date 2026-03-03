@@ -17,15 +17,15 @@
   gtag('config', 'G-ES5DVG0SV7');
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות IL — v4.2</title>
+<title>חדשות IL — v4.3</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#0a0a0f;--surface:#111118;--card:#14141c;--card2:#1c1c28;
-  --b:#ffffff0c;--b2:#ffffff16;
-  --t:#eeeeff;--t2:#7777aa;--t3:#3a3a55;
-  --red:#ff3535;--red2:rgba(255,53,53,.12);
-  --blue:#3d8bff;--green:#00cc88;--amber:#ffaa33;
+  --bg:#13141a;--surface:#1a1b23;--card:#1e202a;--card2:#252733;
+  --b:#ffffff11;--b2:#ffffff1a;
+  --t:#e8e9f0;--t2:#8890aa;--t3:#50546a;
+  --red:#ff4444;--red2:rgba(255,68,68,.12);
+  --blue:#5b9bff;--green:#00d48a;--amber:#ffb347;
   --f:'Heebo',sans-serif;
 }
 html,body{background:var(--bg)}
@@ -40,7 +40,7 @@ a{text-decoration:none;color:inherit}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* HEADER */
-#hdr{position:sticky;top:0;z-index:200;background:rgba(10,10,15,.96);backdrop-filter:blur(28px);border-bottom:1px solid var(--b)}
+#hdr{position:sticky;top:0;z-index:200;background:rgba(19,20,26,.97);backdrop-filter:blur(28px);border-bottom:1px solid var(--b)}
 .h-top{display:flex;align-items:center;justify-content:space-between;padding:11px 15px 9px}
 .brand{display:flex;align-items:center;gap:8px}
 .brand-name{font-size:19px;font-weight:900;letter-spacing:-1px;color:#fff}
@@ -91,12 +91,21 @@ a{text-decoration:none;color:inherit}
 .hc-txt .hc-cta{color:var(--red)}
 
 /* LIVE STRIP */
-.live-row{display:flex;gap:7px;padding:10px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--b)}
-.lc{display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;cursor:pointer}
-.lc-box{width:52px;height:52px;border-radius:15px;background:var(--card);border:1px solid var(--b2);display:flex;align-items:center;justify-content:center;font-size:22px;position:relative;transition:all .15s}
-.lc:active .lc-box{transform:scale(.88)}
-.lc-live{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);background:var(--red);color:#fff;font-size:7px;font-weight:900;padding:1px 5px;border-radius:3px;letter-spacing:.3px}
-.lc-lbl{font-size:9px;font-weight:600;color:var(--t3);white-space:nowrap}
+.live-row{display:flex;gap:7px;padding:10px 12px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--b)}
+.lc-btn{
+  flex-shrink:0;padding:7px 14px;border-radius:20px;
+  background:var(--lc,var(--red));
+  color:#fff;font-family:var(--f);font-size:11px;font-weight:800;
+  border:none;cursor:pointer;white-space:nowrap;
+  text-decoration:none;display:inline-flex;align-items:center;gap:5px;
+  opacity:.92;transition:opacity .15s,transform .15s;
+  position:relative;
+}
+.lc-btn::before{
+  content:'LIVE';font-size:7px;font-weight:900;letter-spacing:.5px;
+  background:rgba(255,255,255,.25);border-radius:3px;padding:1px 4px;
+}
+.lc-btn:active{opacity:1;transform:scale(.95)}
 
 /* PLAYER */
 #player{display:none;margin:0 10px;border-radius:14px;overflow:hidden;border:1px solid var(--b);background:#000}
@@ -263,14 +272,15 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <span id="stxt"><span class="spinner">⟳</span> טוען...</span>
     <button id="rfbtn" onclick="loadNews(true)">⟳ רענן</button>
   </div>
+  <div id="hero"></div>
   <div class="chips" id="chips"></div>
   <div class="live-row">
-    <div class="lc" onclick="openLive('https://www.kan.org.il/live/','כאן 11')"><div class="lc-box">🎙️<div class="lc-live">LIVE</div></div><div class="lc-lbl">כאן 11</div></div>
-    <div class="lc" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','ערוץ 12')"><div class="lc-box">📺<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 12</div></div>
-    <div class="lc" onclick="openLive('https://13tv.co.il/live/','ערוץ 13')"><div class="lc-box">📡<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 13</div></div>
-    <div class="lc" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')"><div class="lc-box">🦅<div class="lc-live">LIVE</div></div><div class="lc-lbl">ערוץ 14</div></div>
-    <a class="lc" href="https://glglz.maariv.co.il/" target="_blank"><div class="lc-box">📻<div class="lc-live">LIVE</div></div><div class="lc-lbl">גלגלצ</div></a>
-    <a class="lc" href="https://glz.co.il/" target="_blank"><div class="lc-box">🎖️<div class="lc-live">LIVE</div></div><div class="lc-lbl">גלצ</div></a>
+    <button class="lc-btn" onclick="openLive('https://www.kan.org.il/live/','כאן 11')" style="--lc:#2563EB">כאן 11</button>
+    <button class="lc-btn" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','ערוץ 12')" style="--lc:#C8102E">ערוץ 12</button>
+    <button class="lc-btn" onclick="openLive('https://13tv.co.il/live/','ערוץ 13')" style="--lc:#7C3AED">ערוץ 13</button>
+    <button class="lc-btn" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')" style="--lc:#d97706">ערוץ 14</button>
+    <a class="lc-btn" href="https://glglz.maariv.co.il/" target="_blank" style="--lc:#0891B2">גלגלצ</a>
+    <a class="lc-btn" href="https://glz.co.il/" target="_blank" style="--lc:#16a34a">גלצ</a>
   </div>
   <div id="nlist"><div class="empty"><div class="empty-ico">📡</div><div class="empty-txt">טוען חדשות...</div></div></div>
 </div>
@@ -289,12 +299,12 @@ input[type=range]{width:100%;accent-color:var(--red)}
 
     <!-- SHELTER TIMES always visible -->
     <div style="margin-top:14px">
-      <div class="hist-hdr" style="margin-bottom:10px">⏱ זמני הגנה לפי סוג מבנה</div>
-      <div class="sh-grid">
-        <div class="sh"><div class="sh-ico">🏃</div><div class="sh-lbl">בניין רגיל</div><div class="sh-val" style="color:#f59e0b">90 שנ'</div></div>
-        <div class="sh"><div class="sh-ico">🏠</div><div class="sh-lbl">בית פרטי</div><div class="sh-val" style="color:#f97316">60 שנ'</div></div>
-        <div class="sh"><div class="sh-ico">🌳</div><div class="sh-lbl">שטח פתוח</div><div class="sh-val" style="color:var(--red)">30 שנ'</div></div>
-        <div class="sh"><div class="sh-ico">🚗</div><div class="sh-lbl">רכב</div><div class="sh-val" style="color:#a78bfa">עצור ושכב</div></div>
+      <div class="hist-hdr" style="margin-bottom:10px">⏱ זמני הגנה</div>
+      <div style="background:var(--card);border:1px solid var(--b);border-radius:14px;overflow:hidden">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--b)"><span style="font-size:12px;color:var(--t2)">🏢 בניין רגיל</span><span style="font-size:13px;font-weight:800;color:#f59e0b">90 שנ'</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--b)"><span style="font-size:12px;color:var(--t2)">🏠 בית פרטי</span><span style="font-size:13px;font-weight:800;color:#f97316">60 שנ'</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid var(--b)"><span style="font-size:12px;color:var(--t2)">🌳 שטח פתוח</span><span style="font-size:13px;font-weight:800;color:var(--red)">30 שנ'</span></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 16px"><span style="font-size:12px;color:var(--t2)">🚗 רכב</span><span style="font-size:13px;font-weight:800;color:#a78bfa">עצור ושכב</span></div>
       </div>
     </div>
 
@@ -327,14 +337,14 @@ input[type=range]{width:100%;accent-color:var(--red)}
       <div class="a-src-row"><span class="a-chip-g">tzevaadom.co.il</span><span class="a-chip-t">WebSocket חי</span></div>
     </div>
 
-    <div class="sh-grid">
-      <div class="sh"><div class="sh-ico">🏃</div><div class="sh-lbl">בניין רגיל</div><div class="sh-val" style="color:#f59e0b">90 שנ'</div></div>
-      <div class="sh"><div class="sh-ico">🏠</div><div class="sh-lbl">בית פרטי</div><div class="sh-val" style="color:#f97316">60 שנ'</div></div>
-      <div class="sh"><div class="sh-ico">🌳</div><div class="sh-lbl">שטח פתוח</div><div class="sh-val" style="color:var(--red)">30 שנ'</div></div>
-      <div class="sh"><div class="sh-ico">🚗</div><div class="sh-lbl">רכב</div><div class="sh-val" style="color:#a78bfa">עצור ושכב</div></div>
+    <!-- Active areas list -->
+    <div style="margin-bottom:10px">
+      <div class="hist-hdr">אזורים באזעקה</div>
+      <div id="areas-list" style="background:var(--card);border:1px solid var(--b);border-radius:14px;padding:12px 16px;min-height:52px;display:flex;flex-wrap:wrap;gap:6px;align-items:center">
+        <span style="font-size:12px;color:var(--t3)">אין אזעקות פעילות כרגע</span>
+      </div>
     </div>
-
-    <div class="hist-hdr">אזעקות שהתקבלו</div>
+    <div class="hist-hdr">היסטוריית אזעקות</div>
     <div id="hlist"><div style="font-size:11px;color:var(--t3);padding:4px 0;line-height:1.9">📡 ממתין לאזעקות.<br>אזעקות שיגיעו יופיעו כאן בזמן אמת.</div></div>
   </div>
 </div>
@@ -363,7 +373,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <div class="s-card">
       <div class="s-row"><div><div class="s-main">רענון אוטומטי</div><div class="s-sub">כל 10 שניות</div></div><div class="tgl on" id="tg-auto" onclick="tog('auto')"></div></div>
     </div>
-    <div class="s-footer">חדשות IL v4.2<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
+    <div class="s-footer">חדשות IL v4.3<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
   </div>
 </div>
 
@@ -586,6 +596,13 @@ function triggerAlert(areas,type,key){
   document.getElementById('a-ico').textContent='🚨';
   document.getElementById('a-stat').textContent='אזעקה פעילה!';
   document.getElementById('a-areas').textContent=str;
+  // Update areas-list display
+  const al=document.getElementById('areas-list');
+  if(al){
+    al.innerHTML=Array.isArray(areas)
+      ? areas.map(a=>'<span style="background:rgba(255,68,68,.15);border:1px solid rgba(255,68,68,.35);color:#ff9999;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px">'+a+'</span>').join('')
+      : '<span style="color:#ff9999;font-size:12px;font-weight:700">'+str+'</span>';
+  }
   document.getElementById('nb-dot').className='nb-badge alrt';
   document.getElementById('tdot').style.display='block';
   document.getElementById('ovl-areas').textContent=str;
@@ -606,6 +623,8 @@ function clearAlertUI(){
   document.getElementById('a-ico').textContent='✅';
   document.getElementById('a-stat').textContent='אין אזעקות כרגע';
   document.getElementById('a-areas').textContent='';
+  const al2=document.getElementById('areas-list');
+  if(al2) al2.innerHTML='<span style="font-size:12px;color:var(--t3)">אין אזעקות פעילות כרגע</span>';
   document.getElementById('nb-dot').className='nb-badge ok';
   document.getElementById('tdot').style.display='none';
 }
