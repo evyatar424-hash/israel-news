@@ -135,27 +135,28 @@ app.get('/api/news', async (req, res) => {
   res.json({ items: newsCache, updated: new Date(cacheTime).toISOString(), total: newsCache.length });
 });
 
-// ── AI PROXY ──
+// ── AI PROXY — Gemini (free tier) ──
 app.post('/api/ai/summarize', async (req, res) => {
   const { title, desc } = req.body || {};
   if (!title) { res.json({ text: '—' }); return; }
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) { res.json({ text: 'API key חסר — הגדר ב-Render Environment Variables.' }); return; }
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) { res.json({ text: 'GEMINI_API_KEY חסר ב-Render Environment Variables.' }); return; }
   try {
-    const body = JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 120,
-      system: 'אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה.',
-      messages: [{ role: 'user', content: `${title}\n${desc || ''}` }]
-    });
-    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+    const prompt = `אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה הבאה. רק המשפט, ללא הסברים.\n\nכותרת: ${title}\n${desc ? 'תיאור: ' + desc : ''}`;
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+    const apiRes = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-      body
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { maxOutputTokens: 100, temperature: 0.3 }
+      })
     });
     const data = await apiRes.json();
-    res.json({ text: data?.content?.[0]?.text || '—' });
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
+    res.json({ text: text || '—' });
   } catch(e) {
+    console.log('Gemini err:', e.message);
     res.json({ text: 'שגיאת חיבור.' });
   }
 });
