@@ -157,8 +157,9 @@ app.post('/api/ai/summarize', async (req, res) => {
       })
     });
     const data = await apiRes.json();
+    console.log('Claude status:', apiRes.status, JSON.stringify(data).slice(0,200));
     const text = data?.content?.[0]?.text?.trim();
-    res.json({ text: text || '—' });
+    res.json({ text: text || data?.error?.message || '—' });
   } catch(e) {
     console.log('Claude err:', e.message);
     res.json({ text: 'שגיאת חיבור.' });
