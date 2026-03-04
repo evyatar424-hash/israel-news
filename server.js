@@ -153,8 +153,10 @@ app.post('/api/ai/summarize', async (req, res) => {
       })
     });
     const data = await apiRes.json();
+    console.log('Gemini response:', JSON.stringify(data).slice(0,300));
     const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    res.json({ text: text || '—' });
+    if(!text && data?.error) console.log('Gemini error:', data.error.message);
+    res.json({ text: text || data?.error?.message || '—' });
   } catch(e) {
     console.log('Gemini err:', e.message);
     res.json({ text: 'שגיאת חיבור.' });
