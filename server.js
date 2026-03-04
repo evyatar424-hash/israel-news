@@ -135,30 +135,32 @@ app.get('/api/news', async (req, res) => {
   res.json({ items: newsCache, updated: new Date(cacheTime).toISOString(), total: newsCache.length });
 });
 
-// ── AI PROXY — Gemini (free tier) ──
+// ── AI PROXY — Claude Haiku ──
 app.post('/api/ai/summarize', async (req, res) => {
   const { title, desc } = req.body || {};
   if (!title) { res.json({ text: '—' }); return; }
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) { res.json({ text: 'GEMINI_API_KEY חסר ב-Render Environment Variables.' }); return; }
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) { res.json({ text: 'ANTHROPIC_API_KEY חסר ב-Render Environment Variables.' }); return; }
   try {
     const prompt = `אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה הבאה. רק המשפט, ללא הסברים.\n\nכותרת: ${title}\n${desc ? 'תיאור: ' + desc : ''}`;
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
-    const apiRes = await fetch(url, {
+    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: 100, temperature: 0.3 }
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 100,
+        messages: [{ role: 'user', content: prompt }]
       })
     });
     const data = await apiRes.json();
-    console.log('Gemini response:', JSON.stringify(data).slice(0,300));
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-    if(!text && data?.error) console.log('Gemini error:', data.error.message);
-    res.json({ text: text || data?.error?.message || '—' });
+    const text = data?.content?.[0]?.text?.trim();
+    res.json({ text: text || '—' });
   } catch(e) {
-    console.log('Gemini err:', e.message);
+    console.log('Claude err:', e.message);
     res.json({ text: 'שגיאת חיבור.' });
   }
 });
