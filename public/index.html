@@ -260,7 +260,6 @@ input[type=range]{width:100%;accent-color:var(--red)}
 
 <!-- NEWS -->
 <div id="panel-news" class="panel on">
-  <div id="hero"></div>
   <div id="player">
     <div class="pl-bar">
       <span class="pl-name" id="pl-name">שידור חי</span>
@@ -492,10 +491,12 @@ async function aiSum(btn){
       signal:AbortSignal.timeout(12000)
     });
     const d=await r.json();
-    if(d.text&&d.text!=='—'&&!d.text.includes('API key')){
+    if(d.text && d.text !== '—' && !d.text.includes('חסר') && !d.text.includes('שגיאה') && d.text.length > 5){
       box.textContent=d.text;
+    }else if(d.text && d.text.includes('חסר')){
+      box.innerHTML='<span style="color:var(--amber)">⚙️ '+d.text+'</span>';
     }else{
-      box.innerHTML='<span style="color:var(--amber)">⚙️ יש להגדיר ANTHROPIC_API_KEY בסביבת Render</span>';
+      box.innerHTML='<span style="color:var(--t3)">לא זמין כרגע — נסה שוב</span>';
     }
   }catch(e){
     box.innerHTML='<span style="color:var(--t3)">לא זמין כרגע</span>';
@@ -582,11 +583,6 @@ async function reqNotif(){
 }
 
 // Alert UI
-function setConn(s){
-  const e=document.getElementById('a-ind');
-  e.className='a-ind'+(s==='ok'?' ok':s==='alrt'?' alrt':'');
-  document.getElementById('a-ts').textContent=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-}
 function triggerAlert(areas,type,key){
   if(key===lastKey)return;lastKey=key;alertOn=true;
   const str=Array.isArray(areas)?areas.join(' · '):String(areas);
