@@ -32,6 +32,10 @@ const CHANNELS = [
   { id:'haaretz',  name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/htz-rss',                                    limit:3 },
   { id:'inn',      name:'ערוץ 7',       color:'#1565c0', icon:'✡️', url:'https://www.israelnationalnews.com/rss.aspx',                              limit:3 },
   { id:'idf',      name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://www.idf.il/rss/',                                                  limit:3 },
+  { id:'i24',      name:'i24NEWS',       color:'#0066cc', icon:'🌐', url:'https://www.i24news.tv/he/rss',                                               limit:4 },
+  { id:'ch15',     name:'ערוץ 15',       color:'#7c3aed', icon:'📻', url:'https://www.15tv.co.il/feed/',                                                limit:4 },
+  { id:'srugim',   name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://www.srugim.co.il/feed',                                               limit:3 },
+  { id:'globes',   name:'גלובס',         color:'#15803d', icon:'💹', url:'https://www.globes.co.il/rss/',                                               limit:3 },
 ];
 
 // Block known logo/placeholder images
