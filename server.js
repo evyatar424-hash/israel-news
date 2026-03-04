@@ -85,15 +85,42 @@ function timeAgo(d) {
 
 // Proxy wrapper for channels that block US IPs (12/13/14)
 async function fetchWithProxy(url) {
-  // Try direct first, fall back to allorigins proxy
+  // Try direct first
   try {
     const feed = await parser.parseURL(url);
     return feed;
-  } catch(e) {
-    // Fallback: allorigins.win CORS proxy
+  } catch(e1) {}
+
+  // Fallback 1: rss2json API
+  try {
+    const r2j = 'https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(url);
+    const res = await fetch(r2j, { signal: AbortSignal.timeout(8000) });
+    const data = await res.json();
+    if (data.status === 'ok' && data.items?.length) {
+      return {
+        items: data.items.map(i => ({
+          title: i.title, link: i.link, pubDate: i.pubDate,
+          contentSnippet: i.description?.replace(/<[^>]+>/g,'').slice(0,200),
+          'media:content': i.enclosure?.link ? { $: { url: i.enclosure.link } } : undefined,
+          guid: i.guid
+        }))
+      };
+    }
+  } catch(e2) {}
+
+  // Fallback 2: allorigins
+  try {
     const proxyUrl = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
     return await parser.parseURL(proxyUrl);
-  }
+  } catch(e3) {}
+
+  // Fallback 3: corsproxy.io
+  try {
+    const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+    return await parser.parseURL(proxyUrl);
+  } catch(e4) {}
+
+  throw new Error('All proxies failed');
 }
 
 const PROXY_CHANNELS = new Set(['ch12','ch12b','ch13','ch14','kan','kan_news']);
