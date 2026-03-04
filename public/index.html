@@ -17,19 +17,19 @@
   gtag('config', 'G-ES5DVG0SV7');
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות IL — v5.0</title>
+<title>חדשות IL — v5.2</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
-  --bg:#0f0d1a;--surface:#17132a;--card:#1e1834;--card2:#251f3d;
-  --b:#ffffff0e;--b2:#ffffff18;
-  --t:#ede9ff;--t2:#9b92cc;--t3:#5a527a;
-  --red:#ff4466;--red2:rgba(255,68,102,.12);
-  --blue:#7c6bff;--green:#00d48a;--amber:#ffb347;
-  --purple:#9d7cff;--purple2:rgba(157,124,255,.15);
+  --bg:#111418;--surface:#181c22;--card:#1d2128;--card2:#242930;
+  --b:#ffffff0d;--b2:#ffffff16;
+  --t:#e8ecf0;--t2:#8896a8;--t3:#4a5568;
+  --red:#e53e3e;--red2:rgba(229,62,62,.12);
+  --blue:#4299e1;--green:#38a169;--amber:#d69e2e;
+  --accent:#c8a96e;--accent2:rgba(200,169,110,.12);
   --f:'Heebo',sans-serif;
 }
-html,body{background:var(--bg)}body::before{content:"";position:fixed;inset:0;background:radial-gradient(ellipse 80% 60% at 50% -10%,rgba(120,80,255,.12),transparent);pointer-events:none;z-index:0}
+html,body{background:var(--bg)}
 body{font-family:var(--f);color:var(--t);max-width:430px;margin:0 auto;padding-bottom:66px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{display:none}
 a{text-decoration:none;color:inherit}
@@ -41,12 +41,12 @@ a{text-decoration:none;color:inherit}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* HEADER */
-#hdr{position:sticky;top:0;z-index:200;background:rgba(12,10,22,.97);backdrop-filter:blur(28px);border-bottom:1px solid var(--b)}
+#hdr{position:sticky;top:0;z-index:200;background:rgba(14,17,21,.97);backdrop-filter:blur(28px);border-bottom:1px solid var(--b)}
 .h-top{display:flex;align-items:center;justify-content:space-between;padding:11px 15px 9px}
 .brand{display:flex;align-items:center;gap:8px}
-.brand-name{font-size:19px;font-weight:900;letter-spacing:-1px;color:#fff}.brand-name em{background:linear-gradient(135deg,#9d7cff,#ff6b9d);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-style:normal}
+.brand-name{font-size:19px;font-weight:900;letter-spacing:-1px;color:#fff}.brand-name em{color:var(--accent);font-style:normal}
 .brand-name em{color:var(--red);font-style:normal}
-.live-badge{display:flex;align-items:center;gap:4px;background:linear-gradient(135deg,#7c6bff,#b066ff);border-radius:5px;padding:2px 9px;font-size:9px;font-weight:900;color:#fff;letter-spacing:1.5px}
+.live-badge{display:flex;align-items:center;gap:4px;background:var(--red);border-radius:5px;padding:2px 9px;font-size:9px;font-weight:900;color:#fff;letter-spacing:1.5px}
 .ldot{width:5px;height:5px;border-radius:50%;background:#fff;animation:blink 1.2s infinite}
 .h-right{text-align:left}
 #hclk{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums}
@@ -67,7 +67,7 @@ a{text-decoration:none;color:inherit}
 /* TABS */
 .tabs{display:flex;border-bottom:1px solid var(--b)}
 .tab{flex:1;padding:10px 4px;border:none;background:none;cursor:pointer;font-family:var(--f);font-size:10px;font-weight:600;color:var(--t3);border-bottom:2px solid transparent;transition:all .18s;position:relative}
-.tab.on{color:var(--t);font-weight:800;border-bottom-color:var(--purple)}
+.tab.on{color:var(--t);font-weight:800;border-bottom-color:var(--red)}
 .tab-dot{position:absolute;top:7px;right:calc(50% - 14px);width:6px;height:6px;border-radius:50%;background:var(--red);display:none;animation:blink .8s infinite}
 .panel{display:none}.panel.on{display:block}
 
@@ -94,17 +94,17 @@ a{text-decoration:none;color:inherit}
 /* LIVE STRIP */
 .live-row{display:flex;gap:8px;padding:10px 12px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--b)}
 .lc-card{
-  flex-shrink:0;width:60px;height:60px;border-radius:16px;
-  background:var(--card);border:1px solid var(--b2);
+  flex-shrink:0;width:62px;height:62px;border-radius:16px;
+  border:1px solid var(--b2);
   display:flex;align-items:center;justify-content:center;
   cursor:pointer;text-decoration:none;position:relative;
-  transition:transform .15s,border-color .15s;overflow:hidden;
+  transition:transform .15s,box-shadow .15s;overflow:hidden;
+  background:var(--card);
 }
-.lc-card:active{transform:scale(.9)}
-.lc-card:hover{border-color:var(--purple)}
-.lc-card img{width:44px;height:44px;object-fit:contain;border-radius:8px}
-.lc-card span{font-size:10px;font-weight:800;color:var(--t);align-items:center;justify-content:center;width:100%;text-align:center}
-.lc-live-dot{position:absolute;bottom:5px;right:5px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid var(--card);animation:blink 1.5s infinite}
+.lc-card:active{transform:scale(.88)}
+.lc-card:hover{box-shadow:0 0 0 2px var(--red)}
+.lc-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.2}
+.lc-live-dot{position:absolute;bottom:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid rgba(0,0,0,.5);animation:blink 1.5s infinite}
 
 /* PLAYER */
 #player{display:none;margin:0 10px;border-radius:14px;overflow:hidden;border:1px solid var(--b);background:#000}
@@ -117,10 +117,10 @@ a{text-decoration:none;color:inherit}
 /* STATUS + CHIPS */
 .statbar{display:flex;align-items:center;justify-content:space-between;padding:6px 13px;border-bottom:1px solid var(--b)}
 #stxt{font-size:10px;color:var(--t3)}
-#rfbtn{font-family:var(--f);font-size:10px;font-weight:700;color:var(--purple);background:var(--purple2);border:1px solid rgba(157,124,255,.25);border-radius:20px;padding:4px 12px;cursor:pointer}
+#rfbtn{font-family:var(--f);font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);border:1px solid rgba(200,169,110,.25);border-radius:20px;padding:4px 12px;cursor:pointer}
 .chips{display:flex;gap:6px;padding:7px 10px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--b)}
 .chip{flex-shrink:0;padding:5px 11px;border-radius:20px;border:1px solid var(--b2);background:none;color:var(--t3);font-family:var(--f);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
-.chip.on{border-color:rgba(157,124,255,.4);background:var(--purple2);color:var(--purple)}
+.chip.on{border-color:rgba(229,62,62,.3);background:var(--red2);color:var(--red)}
 
 /* NEWS CARDS */
 #nlist{padding:8px 10px}
@@ -138,9 +138,9 @@ a{text-decoration:none;color:inherit}
 .nc-new{background:var(--green);color:#000;font-size:8px;font-weight:900;padding:1px 5px;border-radius:3px}
 .nc-title{font-size:14px;font-weight:700;line-height:1.5;color:var(--t)}
 .nc-desc{font-size:11px;color:var(--t2);line-height:1.55;margin-top:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.ai-btn{display:inline-flex;align-items:center;gap:5px;margin-top:9px;padding:5px 12px;border-radius:20px;background:var(--purple2);border:1px solid rgba(157,124,255,.3);color:var(--purple);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .15s}
-.ai-btn:active{background:rgba(157,124,255,.28)}
-.ai-result{display:none;margin-top:8px;padding:9px 12px;border-radius:10px;background:rgba(157,124,255,.06);border:1px solid rgba(157,124,255,.2);font-size:12px;color:var(--t2);line-height:1.7}
+.ai-btn{display:inline-flex;align-items:center;gap:5px;margin-top:9px;padding:5px 12px;border-radius:20px;background:var(--accent2);border:1px solid rgba(200,169,110,.3);color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;font-family:var(--f);transition:all .15s}
+.ai-btn:active{background:rgba(200,169,110,.25)}
+.ai-result{display:none;margin-top:8px;padding:9px 12px;border-radius:10px;background:rgba(200,169,110,.06);border:1px solid rgba(200,169,110,.2);font-size:12px;color:var(--t2);line-height:1.7}
 .ai-result.on{display:block;animation:fadeUp .2s ease}
 .spinner{display:inline-block;animation:spin .6s linear infinite}
 .empty{text-align:center;padding:50px 20px}
@@ -156,7 +156,7 @@ a{text-decoration:none;color:inherit}
 .a-name{font-size:12px;font-weight:700}
 .a-sub{font-size:10px;color:var(--t3);margin-top:2px}
 #a-ts{font-size:9px;color:var(--t3);flex-shrink:0}
-.a-main{border-radius:16px;border:1.5px solid rgba(157,124,255,.2);background:linear-gradient(135deg,rgba(157,124,255,.06),transparent);text-align:center;padding:28px 16px;margin-bottom:10px;transition:all .4s}
+.a-main{border-radius:16px;border:1.5px solid rgba(56,161,105,.2);background:linear-gradient(135deg,rgba(56,161,105,.06),transparent);text-align:center;padding:28px 16px;margin-bottom:10px;transition:all .4s}
 .a-main.alrt{border-color:rgba(255,53,53,.4);background:linear-gradient(135deg,rgba(255,53,53,.08),transparent);animation:pulseR 1.8s infinite}
 #a-ico{font-size:50px;margin-bottom:8px}
 #a-stat{font-size:17px;font-weight:900;color:var(--green)}
@@ -197,7 +197,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
 .s-footer{text-align:center;padding:16px 0 4px;font-size:10px;color:var(--t3);line-height:2.2}
 
 /* BOTTOM NAV */
-#bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:200;background:rgba(12,10,22,.98);backdrop-filter:blur(24px);border-top:1px solid var(--b);display:flex;padding-bottom:env(safe-area-inset-bottom)}
+#bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:200;background:rgba(14,17,21,.98);backdrop-filter:blur(24px);border-top:1px solid var(--b);display:flex;padding-bottom:env(safe-area-inset-bottom)}
 .nb{flex:1;padding:9px 0 8px;border:none;background:none;cursor:pointer;font-family:var(--f);font-size:9px;font-weight:600;color:var(--t3);display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:color .15s}
 .nb.on{color:var(--t);font-weight:800}
 .nb-ico{font-size:21px;line-height:1}
@@ -252,7 +252,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
   </div>
   <div style="display:flex;align-items:center;gap:8px;padding:5px 13px;background:linear-gradient(90deg,rgba(157,124,255,.1),transparent);border-bottom:1px solid var(--b)">
     <span style="font-size:14px">🤖</span>
-    <span style="font-size:10px;color:var(--purple);font-weight:700">חדשות IL — האתר הראשון בישראל עם סיכום AI לכל כתבה</span>
+    <span style="font-size:10px;color:var(--accent);font-weight:700">חדשות IL — האתר הראשון בישראל עם סיכום AI לכל כתבה</span>
   </div>
   <div class="tabs">
     <button class="tab on" onclick="goTab('news')" id="t-news">📰 חדשות</button>
@@ -278,33 +278,41 @@ input[type=range]{width:100%;accent-color:var(--red)}
   <div class="chips" id="chips"></div>
   <div class="live-row">
     <button class="lc-card" onclick="openLive('https://www.kan.org.il/live/','כאן 11')">
-      <img src="https://upload.wikimedia.org/wikipedia/he/thumb/6/64/Kan_11_logo.svg/120px-Kan_11_logo.svg.png" onerror="this.style.display='none';this.nextSibling.style.display='flex'" alt="כאן 11">
-      <span style="display:none">כאן 11</span>
+      <div class="lc-inner" style="background:#0a1628;color:#fff">
+        <span style="font-size:10px;font-weight:700;opacity:.7">כאן</span>
+        <span style="font-size:22px;font-weight:900;line-height:1">11</span>
+      </div>
       <div class="lc-live-dot"></div>
     </button>
     <button class="lc-card" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','ערוץ 12')">
-      <img src="https://upload.wikimedia.org/wikipedia/he/thumb/5/5b/Channel_12_Israel_logo.svg/120px-Channel_12_Israel_logo.svg.png" onerror="this.style.display='none';this.nextSibling.style.display='flex'" alt="ערוץ 12">
-      <span style="display:none">12</span>
+      <div class="lc-inner" style="background:#e8f0ff;color:#1a1aff">
+        <span style="font-size:28px;font-weight:900;line-height:1">12</span>
+      </div>
       <div class="lc-live-dot"></div>
     </button>
     <button class="lc-card" onclick="openLive('https://13tv.co.il/live/','ערוץ 13')">
-      <img src="https://upload.wikimedia.org/wikipedia/he/thumb/6/63/Channel_13_Israel.svg/120px-Channel_13_Israel.svg.png" onerror="this.style.display='none';this.nextSibling.style.display='flex'" alt="ערוץ 13">
-      <span style="display:none">13</span>
+      <div class="lc-inner" style="background:#cc0000;color:#fff">
+        <span style="font-size:26px;font-weight:900;line-height:1">13</span>
+        <span style="font-size:8px;font-weight:700;opacity:.85">רשת</span>
+      </div>
       <div class="lc-live-dot"></div>
     </button>
     <button class="lc-card" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')">
-      <img src="https://upload.wikimedia.org/wikipedia/he/thumb/0/08/Now_14_logo.svg/120px-Now_14_logo.svg.png" onerror="this.style.display='none';this.nextSibling.style.display='flex'" alt="ערוץ 14">
-      <span style="display:none">14</span>
+      <div class="lc-inner" style="background:#b91c1c;color:#fff">
+        <span style="font-size:26px;font-weight:900;line-height:1">14</span>
+      </div>
       <div class="lc-live-dot"></div>
     </button>
     <a class="lc-card" href="https://glglz.maariv.co.il/" target="_blank">
-      <img src="https://upload.wikimedia.org/wikipedia/he/thumb/3/37/Galgalatz_logo.svg/120px-Galgalatz_logo.svg.png" onerror="this.style.display='none';this.nextSibling.style.display='flex'" alt="גלגלצ">
-      <span style="display:none">גלגלצ</span>
+      <div class="lc-inner" style="background:#4c1d95;color:#fbbf24">
+        <span style="font-size:11px;font-weight:900;line-height:1.3">גלגלצ</span>
+      </div>
       <div class="lc-live-dot"></div>
     </a>
     <a class="lc-card" href="https://glz.co.il/" target="_blank">
-      <img src="https://upload.wikimedia.org/wikipedia/he/thumb/b/b4/Galatz_logo.svg/120px-Galatz_logo.svg.png" onerror="this.style.display='none';this.nextSibling.style.display='flex'" alt="גלצ">
-      <span style="display:none">גלצ</span>
+      <div class="lc-inner" style="background:#1e3a8a;color:#fbbf24">
+        <span style="font-size:14px;font-weight:900">גלצ</span>
+      </div>
       <div class="lc-live-dot"></div>
     </a>
   </div>
@@ -399,7 +407,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <div class="s-card">
       <div class="s-row"><div><div class="s-main">רענון אוטומטי</div><div class="s-sub">כל 10 שניות</div></div><div class="tgl on" id="tg-auto" onclick="tog('auto')"></div></div>
     </div>
-    <div class="s-footer">חדשות IL v5.0<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
+    <div class="s-footer">חדשות IL v5.2<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
   </div>
 </div>
 
