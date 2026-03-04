@@ -125,6 +125,23 @@ async function fetchWithProxy(url) {
 
 const PROXY_CHANNELS = new Set(['ch12','ch12b','ch13','ch14','kan','kan_news']);
 
+// Read GitHub Actions cache for blocked channels
+async function readGithubCache() {
+  try {
+    const cachePath = path.join(__dirname, 'public', 'news-cache.json');
+    const fs = require('fs');
+    if (fs.existsSync(cachePath)) {
+      const data = JSON.parse(fs.readFileSync(cachePath, 'utf8'));
+      const age = Date.now() - new Date(data.updated).getTime();
+      if (age < 600000) { // max 10 min old
+        console.log(`GitHub cache: ${data.total} items, age ${Math.round(age/1000)}s`);
+        return data.items || [];
+      }
+    }
+  } catch(e) {}
+  return null;
+}
+
 async function fetchChannel(ch) {
   try {
     const feed = PROXY_CHANNELS.has(ch.id)
@@ -149,9 +166,25 @@ async function fetchChannel(ch) {
 
 let newsCache = [], cacheTime = 0;
 async function refreshNews() {
-  const results = await Promise.allSettled(CHANNELS.map(ch => fetchChannel(ch)));
+  // Direct channels (not blocked)
+  const directChannels = CHANNELS.filter(ch => !PROXY_CHANNELS.has(ch.id));
+  const results = await Promise.allSettled(directChannels.map(ch => fetchChannel(ch)));
   let combined = [], ok = 0;
   results.forEach(r => { if (r.status === 'fulfilled' && r.value.length > 0) { combined = combined.concat(r.value); ok++; } });
+
+  // Try to get blocked channels from GitHub Actions cache
+  const cached = await readGithubCache();
+  if (cached && cached.length > 0) {
+    const cachedIds = new Set(combined.map(i => i.id));
+    const fromCache = cached.filter(i => PROXY_CHANNELS.has(i.source) && !cachedIds.has(i.id));
+    combined = [...combined, ...fromCache];
+    ok += new Set(fromCache.map(i => i.source)).size;
+  } else {
+    // Fallback: try proxy for blocked channels anyway
+    const proxyResults = await Promise.allSettled(CHANNELS.filter(ch => PROXY_CHANNELS.has(ch.id)).map(ch => fetchChannel(ch)));
+    proxyResults.forEach(r => { if (r.status === 'fulfilled' && r.value.length > 0) { combined = combined.concat(r.value); ok++; } });
+  }
+
   combined.sort((a, b) => b.ts - a.ts);
   newsCache = combined; cacheTime = Date.now();
   console.log(`${combined.length} items, ${ok}/${CHANNELS.length} channels`);
