@@ -316,6 +316,25 @@ app.get('/api/alerts/history', (req, res) => {
   res.json(alertHistory);
 });
 
+// Oref history proxy — fetches from pikud haoref official API
+app.get('/api/alerts/oref-history', async (req, res) => {
+  try {
+    const r = await fetch('https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json', {
+      headers: {
+        'Referer': 'https://www.oref.org.il/',
+        'X-Requested-With': 'XMLHttpRequest',
+        'User-Agent': 'Mozilla/5.0'
+      },
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await r.json();
+    res.json(Array.isArray(data) ? data.slice(0, 50) : []);
+  } catch(e) {
+    console.log('Oref history err:', e.message);
+    res.json([]);
+  }
+});
+
 app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected }));
 
 const PORT = process.env.PORT || 3000;
