@@ -17,7 +17,7 @@
   gtag('config', 'G-ES5DVG0SV7');
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות IL — v6.0</title>
+<title>חדשות IL — v6.1</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -366,6 +366,34 @@ input[type=range]{width:100%;accent-color:var(--red)}
 <!-- SETTINGS -->
 <div id="panel-settings" class="panel">
   <div class="s-wrap">
+
+    <!-- INSTALL BANNER -->
+    <div id="installBanner" style="display:none;background:linear-gradient(135deg,#1a365d,#2b6cb0);border-radius:16px;padding:16px;margin-bottom:4px;border:1px solid rgba(66,153,225,.3)">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <img src="/icon-192.png" style="width:48px;height:48px;border-radius:12px" onerror="this.style.display='none'">
+        <div>
+          <div style="font-size:14px;font-weight:900;color:#fff">חדשות IL</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:2px">התקן כאפליקציה — מהיר יותר, עובד אופליין</div>
+        </div>
+      </div>
+      <button onclick="installPWA()" style="width:100%;padding:12px;border-radius:12px;font-family:var(--f);font-size:14px;font-weight:800;cursor:pointer;border:none;background:#fff;color:#1a365d">
+        📲 התקן על המסך הראשי
+      </button>
+    </div>
+
+    <!-- NOTIFICATIONS CARD -->
+    <div id="notifCard" style="background:var(--card);border:1px solid var(--b);border-radius:16px;padding:16px;margin-bottom:4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;font-weight:800">🔔 התראות אזעקות</div>
+          <div style="font-size:10px;color:var(--t3);margin-top:2px">קבל התראה מיידית על כל אזעקה</div>
+        </div>
+        <button id="notifBtn" onclick="requestNotifications()" style="padding:8px 16px;border-radius:20px;border:none;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;background:var(--red);color:#fff">
+          הפעל
+        </button>
+      </div>
+      <div id="notifStatus" style="font-size:10px;color:var(--t3)">סטטוס: לא מופעל</div>
+    </div>
     <div class="s-lbl">התראות</div>
     <button class="s-btn sb-red" onclick="reqNotif()">🔔 הפעל התראות דפדפן</button>
     <div class="s-card">
@@ -387,10 +415,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <div class="s-card">
       <div class="s-row"><div><div class="s-main">רענון אוטומטי</div><div class="s-sub">כל 10 שניות</div></div><div class="tgl on" id="tg-auto" onclick="tog('auto')"></div></div>
     </div>
-    <button id="installBtn" onclick="installPWA()" style="display:none;width:100%;padding:14px;border-radius:14px;font-family:var(--f);font-size:14px;font-weight:800;cursor:pointer;margin-bottom:10px;border:none;background:linear-gradient(135deg,var(--blue),#2b6cb0);color:#fff">
-  📲 התקן כאפליקציה על המסך הראשי
-</button>
-<div class="s-footer">חדשות IL v6.0<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
+    <div class="s-footer">חדשות IL v6.1<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
   </div>
 </div>
 
@@ -556,6 +581,15 @@ function buildList(){
   });
 }
 
+let _lastNewsIds = new Set();
+function sendBreakingNotif(title, source){
+  if(Notification.permission!=='granted')return;
+  if(localStorage.getItem('notif')!=='granted')return;
+  new Notification('🔴 ' + (source||'מבזק'), {
+    body: title, icon:'/icon-192.png', badge:'/icon-192.png',
+    dir:'rtl', tag:'news-'+Date.now()
+  });
+}
 async function loadNews(manual=false){
   if(busy&&!manual)return;busy=true;
   const btn=document.getElementById('rfbtn'),stxt=document.getElementById('stxt');
@@ -602,6 +636,7 @@ async function reqNotif(){
 
 // Alert UI
 function triggerAlert(areas,type,key){
+  sendAlertNotif(areas,type);
   if(key===lastKey)return;lastKey=key;alertOn=true;
   const str=Array.isArray(areas)?areas.join(' · '):String(areas);
   document.getElementById('bar-areas').textContent=str;
@@ -780,6 +815,7 @@ function renderAlertHistory(items) {
 
 // Load on tab switch
 document.addEventListener('DOMContentLoaded', () => {
+  updateNotifStatus();
   document.querySelectorAll('.tab').forEach(t => {
     t.addEventListener('click', () => {
       if (t.dataset.tab === 'alerts') loadAlertHistory();
@@ -790,16 +826,89 @@ document.addEventListener('DOMContentLoaded', () => {
 if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt',(e)=>{
-  e.preventDefault();deferredPrompt=e;
-  const btn=document.getElementById('installBtn');
-  if(btn)btn.style.display='block';
+  e.preventDefault(); deferredPrompt=e;
+  const banner = document.getElementById('installBanner');
+  if(banner) banner.style.display='block';
 });
 function installPWA(){
   if(!deferredPrompt)return;
   deferredPrompt.prompt();
-  deferredPrompt.userChoice.then(()=>{deferredPrompt=null;const btn=document.getElementById('installBtn');if(btn)btn.style.display='none';});
+  deferredPrompt.userChoice.then(r=>{
+    deferredPrompt=null;
+    const banner=document.getElementById('installBanner');
+    if(banner)banner.style.display='none';
+  });
 }
-window.addEventListener('appinstalled',()=>{const btn=document.getElementById('installBtn');if(btn)btn.style.display='none';});
+window.addEventListener('appinstalled',()=>{
+  const banner=document.getElementById('installBanner');
+  if(banner)banner.style.display='none';
+});
+
+// Show install banner if not already installed
+(function(){
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if(isStandalone) return; // already installed
+  // Show banner after 2 seconds if not dismissed
+  setTimeout(()=>{
+    if(!deferredPrompt && !/iphone|ipad|ipod/i.test(navigator.userAgent)) return;
+    const banner = document.getElementById('installBanner');
+    if(banner && banner.style.display==='none') banner.style.display='block';
+    // iOS special message
+    if(/iphone|ipad|ipod/i.test(navigator.userAgent)){
+      const btn = banner && banner.querySelector('button');
+      if(btn) btn.textContent = '📲 לחץ שתף ← הוסף למסך הבית';
+    }
+  }, 2000);
+})();
+
+// ── NOTIFICATIONS ──
+function updateNotifStatus(){
+  const btn=document.getElementById('notifBtn');
+  const status=document.getElementById('notifStatus');
+  if(!('Notification' in window)){
+    if(status)status.textContent='התראות לא נתמכות בדפדפן זה';
+    if(btn)btn.style.display='none';
+    return;
+  }
+  if(Notification.permission==='granted'){
+    if(status)status.textContent='✅ התראות מופעלות';
+    if(btn){btn.textContent='מופעל ✓';btn.style.background='var(--green)';btn.disabled=true;}
+  } else if(Notification.permission==='denied'){
+    if(status)status.textContent='❌ חסום — שנה בהגדרות הדפדפן';
+    if(btn){btn.textContent='חסום';btn.style.background='var(--t3)';btn.disabled=true;}
+  }
+}
+
+async function requestNotifications(){
+  if(!('Notification' in window))return;
+  const perm = await Notification.requestPermission();
+  updateNotifStatus();
+  if(perm==='granted'){
+    new Notification('חדשות IL 🔔',{
+      body:'התראות אזעקות מופעלות! תקבל התראה מיידית.',
+      icon:'/icon-192.png',
+      dir:'rtl'
+    });
+    localStorage.setItem('notif','granted');
+  }
+}
+
+// Send notification when alert arrives
+function sendAlertNotif(cities, type){
+  if(Notification.permission!=='granted')return;
+  const body = Array.isArray(cities) ? cities.slice(0,4).join('، ') : cities;
+  new Notification('🚨 ' + (type||'ירי רקטות'),{
+    body: body,
+    icon:'/icon-192.png',
+    badge:'/icon-192.png',
+    vibrate:[300,100,300,100,300],
+    requireInteraction:true,
+    dir:'rtl',
+    tag:'alert'
+  });
+}
+
+document.addEventListener('DOMContentLoaded', updateNotifStatus);
 loadNews(true);
 // Start alert panel in unavail, SSE will switch to live if server responds
 showAlertPanel('unavail');
