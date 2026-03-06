@@ -230,11 +230,12 @@ app.post('/api/ai/summarize', async (req, res) => {
   }
 });
 
-// ── ALERTS via Tzofar WebSocket ──
+// ── ALERTS ENGINE ──
 let currentAlert = null;
 let alertHistory = [];
 let tzofarWs = null;
 let tzofarConnected = false;
+let orefConnected = false;
 const sseClients = new Set();
 
 function broadcastSSE(payload) {
@@ -244,51 +245,131 @@ function broadcastSSE(payload) {
   });
 }
 
+// ── SOURCE 1: oref.org.il polling (primary — works from any IP) ──
+let lastOrefAlertId = null;
+let orefAlertClearTimer = null;
+
+async function pollOref() {
+  try {
+    const r = await fetch('https://www.oref.org.il/warningMessages/alert/Alerts.json', {
+      headers: {
+        'Referer': 'https://www.oref.org.il/',
+        'X-Requested-With': 'XMLHttpRequest',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      },
+      signal: AbortSignal.timeout(4000)
+    });
+
+    if (!orefConnected) {
+      orefConnected = true;
+      console.log('Oref polling ✓');
+      broadcastSSE({ alert: currentAlert, connected: true });
+    }
+
+    const text = await r.text();
+    const trimmed = text.trim();
+
+    if (!trimmed || trimmed === '' || trimmed === '\r\n' || trimmed === '\\r\\n') {
+      if (currentAlert) {
+        console.log('Oref: all clear');
+        currentAlert = null;
+        broadcastSSE({ alert: null, connected: true });
+      }
+      return;
+    }
+
+    let msg;
+    try { msg = JSON.parse(trimmed); } catch(e) { return; }
+
+    if (!msg || !msg.data || !Array.isArray(msg.data) || msg.data.length === 0) {
+      if (currentAlert) { currentAlert = null; broadcastSSE({ alert: null, connected: true }); }
+      return;
+    }
+
+    const alertId = String(msg.id || '');
+    if (alertId && alertId === lastOrefAlertId) return;
+    lastOrefAlertId = alertId;
+
+    currentAlert = {
+      data: msg.data,
+      title: msg.title || msg.cat || 'ירי רקטות',
+      id: alertId || String(Date.now()),
+      ts: Date.now()
+    };
+    alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
+    if (alertHistory.length > 50) alertHistory.length = 50;
+    console.log('🚨 Oref alert:', currentAlert.title, currentAlert.data.slice(0, 3));
+    broadcastSSE({ alert: currentAlert, connected: true });
+
+    // Auto-clear after 2 minutes if oref goes quiet
+    if (orefAlertClearTimer) clearTimeout(orefAlertClearTimer);
+    orefAlertClearTimer = setTimeout(() => {
+      if (currentAlert) {
+        currentAlert = null;
+        lastOrefAlertId = null;
+        broadcastSSE({ alert: null, connected: true });
+      }
+    }, 120000);
+
+  } catch(e) {
+    if (orefConnected) {
+      orefConnected = false;
+      console.log('Oref poll err:', e.message);
+      broadcastSSE({ alert: currentAlert, connected: false });
+    }
+  }
+}
+
+pollOref();
+setInterval(pollOref, 5000);
+
+// ── SOURCE 2: Tzofar WebSocket (secondary — may be blocked from US IP) ──
 function connectTzofar() {
   try {
     if (tzofarWs) { try { tzofarWs.terminate(); } catch(e) {} }
-    console.log('Connecting Tzofar...');
+    console.log('Connecting Tzofar WebSocket...');
     tzofarWs = new WebSocket('wss://ws.tzevaadom.co.il/socket?platform=WEB', {
       headers: { 'Origin': 'https://www.tzevaadom.co.il', 'User-Agent': 'Mozilla/5.0' }
     });
     tzofarWs.on('open', () => {
       tzofarConnected = true;
-      console.log('Tzofar ✓');
-      broadcastSSE({ alert: currentAlert, connected: true });
+      console.log('Tzofar WebSocket ✓ (bonus source)');
     });
     tzofarWs.on('message', (raw) => {
       try {
         const msg = JSON.parse(raw.toString());
-        // Pikud Haoref format: { id, cat, title, data: [...cities] }
         if (msg.data && Array.isArray(msg.data) && msg.data.length > 0) {
-          currentAlert = { data: msg.data, title: msg.title || 'ירי רקטות', id: String(msg.id || Date.now()), ts: Date.now() };
-          alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
-          if (alertHistory.length > 30) alertHistory.length = 30;
-          broadcastSSE({ alert: currentAlert, connected: true });
+          const newAlert = { data: msg.data, title: msg.title || 'ירי רקטות', id: String(msg.id || Date.now()), ts: Date.now() };
+          if (!currentAlert || currentAlert.id !== newAlert.id) {
+            currentAlert = newAlert;
+            alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
+            if (alertHistory.length > 50) alertHistory.length = 50;
+            console.log('🚨 Tzofar alert:', currentAlert.title);
+            broadcastSSE({ alert: currentAlert, connected: true });
+          }
         }
-        // Tzofar ALERT format
         if (msg.type === 'ALERT') {
           const cities = msg.notification?.cities || msg.cities || [];
-          currentAlert = { data: cities, title: msg.notification?.threat || 'ירי רקטות', id: String(Date.now()), ts: Date.now() };
-          alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
-          broadcastSSE({ alert: currentAlert, connected: true });
+          if (cities.length > 0 && !currentAlert) {
+            currentAlert = { data: cities, title: msg.notification?.threat || 'ירי רקטות', id: String(Date.now()), ts: Date.now() };
+            alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
+            broadcastSSE({ alert: currentAlert, connected: true });
+          }
         }
-        // All-clear
-        if (msg.type === 'ALL_CLEAR' || (msg.data && msg.data.length === 0)) {
+        if (msg.type === 'ALL_CLEAR') {
           if (currentAlert) { currentAlert = null; broadcastSSE({ alert: null, connected: true }); }
         }
       } catch(e) {}
     });
-    tzofarWs.on('close', () => { tzofarConnected = false; setTimeout(connectTzofar, 10000); });
-    tzofarWs.on('error', () => { tzofarConnected = false; setTimeout(connectTzofar, 15000); });
-    // Keepalive
+    tzofarWs.on('close', () => { tzofarConnected = false; setTimeout(connectTzofar, 15000); });
+    tzofarWs.on('error', (e) => { tzofarConnected = false; console.log('Tzofar WS err:', e.message); setTimeout(connectTzofar, 30000); });
     const ping = setInterval(() => {
       if (tzofarWs?.readyState === WebSocket.OPEN) tzofarWs.ping();
       else clearInterval(ping);
     }, 55000);
   } catch(e) {
     console.log('Tzofar err:', e.message);
-    setTimeout(connectTzofar, 15000);
+    setTimeout(connectTzofar, 30000);
   }
 }
 connectTzofar();
@@ -335,7 +416,7 @@ app.get('/api/alerts/oref-history', async (req, res) => {
   }
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected }));
+app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected, oref: orefConnected }));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
