@@ -147,34 +147,56 @@ a{text-decoration:none;color:inherit}
 .empty-ico{font-size:40px}
 .empty-txt{font-size:13px;color:var(--t2);margin-top:8px}
 
-/* ALERTS */
-.a-wrap{padding:10px}
-.a-status{display:flex;align-items:center;gap:12px;background:var(--card);border:1px solid var(--b);border-radius:14px;padding:13px 15px;margin-bottom:10px}
-.a-ind{width:10px;height:10px;border-radius:50%;background:var(--t3);transition:background .3s;flex-shrink:0}
-.a-ind.ok{background:var(--green);animation:pulseG 2s infinite}
-.a-ind.alrt{background:var(--red);animation:pulseR 1s infinite}
-.a-name{font-size:12px;font-weight:700}
-.a-sub{font-size:10px;color:var(--t3);margin-top:2px}
-#a-ts{font-size:9px;color:var(--t3);flex-shrink:0}
-.a-main{border-radius:16px;border:1.5px solid rgba(56,161,105,.2);background:linear-gradient(135deg,rgba(56,161,105,.06),transparent);text-align:center;padding:28px 16px;margin-bottom:10px;transition:all .4s}
-.a-main.alrt{border-color:rgba(255,53,53,.4);background:linear-gradient(135deg,rgba(255,53,53,.08),transparent);animation:pulseR 1.8s infinite}
-#a-ico{font-size:50px;margin-bottom:8px}
-#a-stat{font-size:17px;font-weight:900;color:var(--green)}
-.a-main.alrt #a-stat{color:#ff8888}
-#a-areas{font-size:13px;font-weight:700;color:#ff9999;margin-top:8px;line-height:2}
-.a-src-row{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:10px}
-.a-chip-g{background:rgba(0,204,136,.1);border:1px solid rgba(0,204,136,.25);border-radius:4px;padding:1px 7px;font-size:8px;font-weight:800;color:var(--green)}
-.a-chip-t{font-size:9px;color:var(--t3)}
-.sh-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
-.sh{background:var(--card);border:1px solid var(--b);border-radius:12px;padding:12px 10px;text-align:center}
-.sh-ico{font-size:22px}
-.sh-lbl{font-size:10px;color:var(--t2);margin-top:4px}
-.sh-val{font-size:15px;font-weight:900;margin-top:3px}
-.hist-hdr{font-size:9px;font-weight:800;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px}
-.hist-item{background:var(--card);border:1px solid var(--b);border-radius:10px;padding:10px 14px;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between;gap:10px}
-.hist-c{font-size:12px;font-weight:700}
-.hist-ty{font-size:10px;color:var(--t3);margin-top:2px}
-.hist-t{font-size:12px;font-weight:800;color:var(--amber);flex-shrink:0}
+/* ALERTS PANEL v2 */
+.ap-wrap{padding:0;background:var(--bg)}
+.ap-live{margin:10px 10px 0;border-radius:18px;overflow:hidden;border:1px solid var(--b);background:linear-gradient(135deg,#0d1f12 0%,#111418 100%);position:relative;}
+.ap-live.active{border-color:rgba(229,62,62,.5);background:linear-gradient(135deg,#1a0505 0%,#111418 100%);}
+.ap-live-top{display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;}
+.ap-live-left{display:flex;align-items:center;gap:10px}
+.ap-pulse{width:14px;height:14px;border-radius:50%;background:var(--green);animation:apPulseG 2.5s infinite;flex-shrink:0;}
+.ap-pulse.alrt{background:var(--red);animation:apPulseR 1s infinite;}
+@keyframes apPulseG{0%,100%{box-shadow:0 0 0 0 rgba(56,161,105,.5)}70%{box-shadow:0 0 0 10px transparent}}
+@keyframes apPulseR{0%,100%{box-shadow:0 0 0 0 rgba(229,62,62,.7)}50%{box-shadow:0 0 0 12px transparent}}
+.ap-live-label{font-size:13px;font-weight:900;color:var(--t)}
+.ap-live-sub{font-size:10px;color:var(--t3);margin-top:1px}
+.ap-src-badge{font-size:8px;font-weight:800;letter-spacing:.5px;padding:3px 9px;border-radius:20px;background:rgba(56,161,105,.15);border:1px solid rgba(56,161,105,.3);color:var(--green);}
+.ap-src-badge.alrt{background:rgba(229,62,62,.15);border-color:rgba(229,62,62,.4);color:var(--red);}
+.ap-status-box{margin:0 14px 14px;border-radius:14px;padding:18px 16px;background:rgba(56,161,105,.06);border:1px solid rgba(56,161,105,.15);text-align:center;transition:all .4s;}
+.ap-status-box.alrt{background:rgba(229,62,62,.08);border-color:rgba(229,62,62,.35);animation:apPulseR 2s infinite;}
+.ap-status-ico{font-size:42px;margin-bottom:6px;line-height:1}
+.ap-status-txt{font-size:18px;font-weight:900;color:var(--green)}
+.ap-status-box.alrt .ap-status-txt{color:#ff6b6b}
+.ap-status-areas{font-size:13px;font-weight:700;color:#ff9999;margin-top:10px;line-height:2;display:none;}
+.ap-status-box.alrt .ap-status-areas{display:block}
+.ap-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 10px 0;}
+.ap-stat{background:var(--card);border:1px solid var(--b);border-radius:14px;padding:11px 8px;text-align:center;}
+.ap-stat-val{font-size:20px;font-weight:900;color:var(--t)}
+.ap-stat-lbl{font-size:9px;color:var(--t3);margin-top:3px;line-height:1.3}
+.ap-sec{display:flex;align-items:center;justify-content:space-between;padding:14px 14px 6px;}
+.ap-sec-title{font-size:10px;font-weight:800;color:var(--t3);letter-spacing:1.5px;text-transform:uppercase}
+.ap-sec-btn{font-size:10px;font-weight:700;color:var(--accent);background:var(--accent2);border:1px solid rgba(200,169,110,.25);border-radius:20px;padding:3px 10px;cursor:pointer;font-family:var(--f);}
+.ap-hist{padding:0 10px 10px}
+.ap-hist-item{background:var(--card);border:1px solid var(--b);border-radius:14px;margin-bottom:8px;overflow:hidden;animation:fadeUp .3s ease both;}
+.ap-hist-head{display:flex;align-items:center;justify-content:space-between;padding:10px 13px 8px;border-bottom:1px solid var(--b);}
+.ap-hist-type{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:900;color:var(--red);}
+.ap-hist-dt{font-size:10px;color:var(--t3)}
+.ap-hist-cities{padding:8px 13px;font-size:12px;color:var(--t2);line-height:1.8;}
+.ap-hist-count{display:inline-block;margin-top:2px;font-size:9px;font-weight:800;color:var(--amber);background:rgba(214,158,46,.12);border:1px solid rgba(214,158,46,.25);border-radius:20px;padding:1px 8px;}
+.ap-tg{margin:4px 10px 10px;display:flex;align-items:center;gap:12px;background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.2);border-radius:14px;padding:12px 15px;text-decoration:none;transition:background .15s;}
+.ap-tg:active{background:rgba(37,99,235,.15)}
+.ap-tg-ico{font-size:24px;flex-shrink:0}
+.ap-tg-main{font-size:13px;font-weight:800;color:#60a5fa}
+.ap-tg-sub{font-size:10px;color:var(--t3);margin-top:2px}
+.ap-tg-arr{font-size:16px;color:rgba(96,165,250,.5);margin-right:auto}
+.ap-instr{margin:0 10px 10px;background:var(--card);border:1px solid var(--b);border-radius:14px;overflow:hidden;}
+.ap-instr-head{padding:10px 14px;border-bottom:1px solid var(--b);font-size:10px;font-weight:800;color:var(--t3);letter-spacing:1px;}
+.ap-instr-body{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.ap-instr-row{display:flex;align-items:flex-start;gap:10px}
+.ap-instr-num{font-size:20px;flex-shrink:0;line-height:1.2}
+.ap-instr-txt{font-size:12px;color:var(--t2);line-height:1.6}
+.ap-instr-txt strong{color:var(--t)}
+.ap-empty{text-align:center;padding:30px 20px;color:var(--t3);font-size:12px;}
+.ap-empty-ico{font-size:32px;margin-bottom:8px}
 
 /* SETTINGS */
 .s-wrap{padding:10px}
@@ -321,45 +343,56 @@ input[type=range]{width:100%;accent-color:var(--red)}
 
 <!-- ALERTS -->
 <div id="panel-alerts" class="panel">
-  <div style="padding:10px 12px">
-
-    <!-- STATUS BAR -->
-    <div class="a-status" style="margin-bottom:10px">
-      <div class="a-ind ok" id="a-ind"></div>
-      <div style="flex:1">
-        <div class="a-name">היסטוריית שיגורים — פיקוד העורף</div>
-        <div class="a-sub" id="a-sub-txt">טוען...</div>
+  <div class="ap-wrap">
+    <div class="ap-live" id="ap-live-card">
+      <div class="ap-live-top">
+        <div class="ap-live-left">
+          <div class="ap-pulse" id="ap-pulse"></div>
+          <div>
+            <div class="ap-live-label" id="ap-live-label">מחובר לצופר</div>
+            <div class="ap-live-sub" id="ap-live-sub">מאזין לאזעקות בזמן אמת</div>
+          </div>
+        </div>
+        <div class="ap-src-badge" id="ap-src-badge">🟢 LIVE</div>
       </div>
-      <button onclick="loadAlertHistory()" style="background:var(--b2);border:none;color:var(--t2);border-radius:8px;padding:4px 10px;font-size:10px;cursor:pointer;font-family:var(--f)">רענן</button>
+      <div class="ap-status-box" id="ap-status-box">
+        <div class="ap-status-ico" id="ap-status-ico">🛡️</div>
+        <div class="ap-status-txt" id="ap-status-txt">אין אזעקות פעילות</div>
+        <div class="ap-status-areas" id="ap-status-areas"></div>
+      </div>
     </div>
-
-    <!-- ALERT HISTORY LIST -->
-    <div class="hist-hdr">שיגורים אחרונים</div>
-    <div id="alert-hist-list">
-      <div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">⏳ טוען היסטוריה...</div>
+    <div class="ap-stats">
+      <div class="ap-stat"><div class="ap-stat-val" id="ap-stat-today">—</div><div class="ap-stat-lbl">אזעקות היום</div></div>
+      <div class="ap-stat"><div class="ap-stat-val" id="ap-stat-cities">—</div><div class="ap-stat-lbl">יישובים שנפגעו</div></div>
+      <div class="ap-stat"><div class="ap-stat-val" id="ap-stat-total">—</div><div class="ap-stat-lbl">סה״כ שיגורים</div></div>
     </div>
-
-    <!-- TELEGRAM LINK -->
-    <a href="https://t.me/CumtaAlertsChannel" target="_blank"
-      style="display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;padding:12px;background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.25);border-radius:12px;color:#60a5fa;font-size:13px;font-weight:700;text-decoration:none">
-      ✈️ ערוץ טלגרם — כומתה צבע אדום
+    <div class="ap-sec">
+      <span class="ap-sec-title">שיגורים אחרונים</span>
+      <button class="ap-sec-btn" onclick="apLoadHistory()">↻ רענן</button>
+    </div>
+    <div class="ap-hist" id="ap-hist-list">
+      <div class="ap-empty"><div class="ap-empty-ico">⏳</div>טוען היסטוריה...</div>
+    </div>
+    <a href="https://t.me/CumtaAlertsChannel" target="_blank" class="ap-tg">
+      <div class="ap-tg-ico">✈️</div>
+      <div><div class="ap-tg-main">ערוץ טלגרם — כומתה</div><div class="ap-tg-sub">התראות צבע אדום בזמן אמת</div></div>
+      <div class="ap-tg-arr">›</div>
     </a>
-
-    <!-- INSTRUCTIONS -->
-    <div style="margin-top:10px;background:var(--card);border:1px solid var(--b);border-radius:14px;overflow:hidden">
-      <div style="padding:11px 15px;border-bottom:1px solid var(--b);font-size:10px;font-weight:800;color:var(--t3);letter-spacing:1px">מה לעשות באזעקה</div>
-      <div style="padding:13px 15px;display:flex;flex-direction:column;gap:9px">
-        <div style="display:flex;align-items:flex-start;gap:10px"><span style="font-size:20px">1️⃣</span><div style="font-size:12px;color:var(--t2);line-height:1.6"><strong style="color:var(--t)">שמע אזעקה?</strong> רוץ מיידית למרחב המוגן</div></div>
-        <div style="display:flex;align-items:flex-start;gap:10px"><span style="font-size:20px">2️⃣</span><div style="font-size:12px;color:var(--t2);line-height:1.6"><strong style="color:var(--t)">סגור דלתות וחלונות</strong> והישאר בפנים</div></div>
-        <div style="display:flex;align-items:flex-start;gap:10px"><span style="font-size:20px">3️⃣</span><div style="font-size:12px;color:var(--t2);line-height:1.6"><strong style="color:var(--t)">הישאר במרחב</strong> לפחות 10 דקות לאחר סיום</div></div>
+    <div class="ap-instr">
+      <div class="ap-instr-head">⚠️ מה לעשות באזעקה</div>
+      <div class="ap-instr-body">
+        <div class="ap-instr-row"><span class="ap-instr-num">1️⃣</span><div class="ap-instr-txt"><strong>שמע אזעקה?</strong> רוץ מיידית למרחב המוגן הקרוב</div></div>
+        <div class="ap-instr-row"><span class="ap-instr-num">2️⃣</span><div class="ap-instr-txt"><strong>סגור דלתות וחלונות</strong> והישאר בפנים עד לסיום</div></div>
+        <div class="ap-instr-row"><span class="ap-instr-num">3️⃣</span><div class="ap-instr-txt"><strong>הישאר במרחב מוגן</strong> לפחות 10 דקות לאחר הסיום</div></div>
       </div>
     </div>
-
-    <!-- HIDDEN for JS compat -->
     <div id="a-unavail" style="display:none"></div>
     <div id="a-live-wrap" style="display:none"><div id="areas-list"></div><div id="hlist"></div></div>
-    <div id="a-main" style="display:none"><div id="a-ico"></div><div id="a-stat"></div><div id="a-areas"></div></div>
+    <div id="a-main" style="display:none"></div>
     <div id="a-ts" style="display:none"></div>
+    <div id="a-ind" style="display:none"></div>
+    <div id="a-sub-txt" style="display:none"></div>
+    <div id="alert-hist-list" style="display:none"></div>
   </div>
 </div>
 
@@ -664,6 +697,8 @@ function triggerAlert(areas,type,key){
   histItems.unshift({data:Array.isArray(areas)?areas:[areas],title:type,alertDate:new Date().toISOString()});
   if(histItems.length>20)histItems.length=20;
   renderHist();
+  // New UI
+  apSetAlert({data:Array.isArray(areas)?areas:[areas],title:type});
 }
 function clearAlertUI(){
   if(!alertOn)return;alertOn=false;lastKey='';
@@ -676,6 +711,8 @@ function clearAlertUI(){
   if(al2) al2.innerHTML='<span style="font-size:12px;color:var(--t3)">אין אזעקות פעילות כרגע</span>';
   document.getElementById('nb-dot').className='nb-badge ok';
   document.getElementById('tdot').style.display='none';
+  // New UI
+  apSetAlert(null);
 }
 function closeOvl(){document.getElementById('ovl').classList.remove('on');}
 
@@ -714,6 +751,8 @@ function setConn(s){
     alertServerReachable=true;
     showAlertPanel('live');
   }
+  // New UI
+  apSetLive(s==='ok'||s==='alrt');
 }
 
 // SSE stream
@@ -909,6 +948,61 @@ function sendAlertNotif(cities, type){
 }
 
 document.addEventListener('DOMContentLoaded', updateNotifStatus);
+// ── ALERT PANEL v2 JS ──
+function apSetLive(connected){
+  const pulse=document.getElementById('ap-pulse'),label=document.getElementById('ap-live-label'),sub=document.getElementById('ap-live-sub'),badge=document.getElementById('ap-src-badge');
+  if(!pulse)return;
+  if(connected){pulse.classList.remove('alrt');if(label)label.textContent='מחובר לצופר';if(sub)sub.textContent='מאזין לאזעקות בזמן אמת';if(badge){badge.textContent='🟢 LIVE';badge.classList.remove('alrt');}}
+  else{pulse.classList.add('alrt');if(label)label.textContent='מתחבר מחדש...';if(sub)sub.textContent='מנסה לחזור לצופר';if(badge){badge.textContent='🔴 OFF';badge.classList.add('alrt');}}
+}
+function apSetAlert(alert){
+  const box=document.getElementById('ap-status-box'),ico=document.getElementById('ap-status-ico'),txt=document.getElementById('ap-status-txt'),areas=document.getElementById('ap-status-areas'),card=document.getElementById('ap-live-card'),pulse=document.getElementById('ap-pulse'),badge=document.getElementById('ap-src-badge');
+  if(!box)return;
+  if(alert&&alert.data&&alert.data.length>0){
+    box.classList.add('alrt');if(card)card.classList.add('active');if(pulse)pulse.classList.add('alrt');
+    if(badge){badge.textContent='🚨 אזעקה!';badge.classList.add('alrt');}
+    if(ico)ico.textContent='🚨';if(txt)txt.textContent=alert.title||'ירי רקטות';if(areas)areas.textContent=alert.data.join(' • ');
+  }else{
+    box.classList.remove('alrt');if(card)card.classList.remove('active');if(pulse)pulse.classList.remove('alrt');
+    if(badge){badge.textContent='🟢 LIVE';badge.classList.remove('alrt');}
+    if(ico)ico.textContent='🛡️';if(txt)txt.textContent='אין אזעקות פעילות';if(areas)areas.textContent='';
+  }
+}
+function apUpdateStats(items){
+  if(!items||!items.length)return;
+  const today=new Date().toLocaleDateString('he-IL');
+  let todayCount=0;const totalCities=new Set();
+  items.forEach(item=>{
+    const d=item.alertDate?new Date(item.alertDate).toLocaleDateString('he-IL'):'';
+    if(d===today)todayCount++;
+    (item.data||item.cities||[]).forEach(c=>totalCities.add(c));
+  });
+  const s1=document.getElementById('ap-stat-today'),s2=document.getElementById('ap-stat-cities'),s3=document.getElementById('ap-stat-total');
+  if(s1)s1.textContent=todayCount;if(s2)s2.textContent=totalCities.size;if(s3)s3.textContent=items.length;
+}
+function apRenderHistory(items){
+  const el=document.getElementById('ap-hist-list');if(!el)return;
+  if(!items||!items.length){el.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">🕊️</div>אין אירועים לאחרונה</div>';return;}
+  el.innerHTML=items.slice(0,30).map((item,i)=>{
+    const cities=Array.isArray(item.data)?item.data:(item.cities||[]);
+    const main=cities.slice(0,5).join(' · ');
+    const extra=cities.length>5?`<span class="ap-hist-count">+${cities.length-5} יישובים</span>`:'';
+    const d=item.alertDate?new Date(item.alertDate):null;
+    const timeStr=d?d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):'';
+    const dateStr=d?d.toLocaleDateString('he-IL',{day:'numeric',month:'numeric'}):'';
+    return `<div class="ap-hist-item" style="animation-delay:${i*.04}s"><div class="ap-hist-head"><div class="ap-hist-type">🚨 ${item.title||'ירי רקטות'}</div><div class="ap-hist-dt">${dateStr} · ${timeStr}</div></div><div class="ap-hist-cities">${main}${extra?'<br>'+extra:''}</div></div>`;
+  }).join('');
+  apUpdateStats(items);
+}
+async function apLoadHistory(){
+  const el=document.getElementById('ap-hist-list');
+  if(el)el.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">⏳</div>טוען...</div>';
+  try{const r=await fetch('/api/alerts/history');const d=await r.json();if(Array.isArray(d)&&d.length>0){apRenderHistory(d);return;}}catch(e){}
+  try{const r2=await fetch('/api/alerts/oref-history');const d2=await r2.json();if(Array.isArray(d2)&&d2.length>0){apRenderHistory(d2);return;}}catch(e){}
+  const el2=document.getElementById('ap-hist-list');if(el2)el2.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">🕊️</div>אין נתוני שיגורים כרגע</div>';
+}
+// New UI is fed via patched setConn / triggerAlert / clearAlertUI
+
 loadNews(true);
 // Start alert panel in unavail, SSE will switch to live if server responds
 showAlertPanel('unavail');
