@@ -269,29 +269,35 @@ app.post('/api/ai/summarize', async (req, res) => {
   if (!title) { res.json({ text: '—' }); return; }
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) { res.json({ text: 'ANTHROPIC_API_KEY חסר ב-Render Environment Variables.' }); return; }
-  try {
-    const prompt = `אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה הבאה. רק המשפט, ללא הסברים.\n\nכותרת: ${title}\n${desc ? 'תיאור: ' + desc : ''}`;
-    const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 100,
-        messages: [{ role: 'user', content: prompt }]
-      })
-    });
-    const data = await apiRes.json();
-    console.log('Claude status:', apiRes.status, JSON.stringify(data).slice(0,200));
-    const text = data?.content?.[0]?.text?.trim();
-    res.json({ text: text || data?.error?.message || '—' });
-  } catch(e) {
-    console.log('Claude err:', e.message);
-    res.json({ text: 'שגיאת חיבור.' });
+  const MODELS = ['claude-haiku-4-5-20251001', 'claude-haiku-3-5-20241022'];
+  const prompt = `אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה הבאה. רק המשפט, ללא הסברים.\n\nכותרת: ${title}\n${desc ? 'תיאור: ' + desc : ''}`;
+
+  for (const model of MODELS) {
+    try {
+      const apiRes = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({ model, max_tokens: 100, messages: [{ role: 'user', content: prompt }] }),
+        signal: AbortSignal.timeout(10000)
+      });
+      const data = await apiRes.json();
+      // 529 = overloaded, try next model
+      if (apiRes.status === 529 || data?.error?.type === 'overloaded_error') {
+        console.log(`${model} overloaded, trying next...`);
+        continue;
+      }
+      const text = data?.content?.[0]?.text?.trim();
+      if (text) { res.json({ text }); return; }
+      res.json({ text: data?.error?.message || '—' }); return;
+    } catch(e) {
+      console.log(`${model} err: ${e.message}`);
+    }
   }
+  res.json({ text: '—' }); // all models failed
 });
 
 // ── ALERTS ENGINE ──
