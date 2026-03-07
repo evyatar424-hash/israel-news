@@ -264,12 +264,23 @@ app.get('/api/news', async (req, res) => {
 });
 
 // ── AI PROXY — Claude Haiku ──
+// Summary cache — avoid duplicate API calls
+const summaryCache = new Map();
+
 app.post('/api/ai/summarize', async (req, res) => {
   const { title, desc } = req.body || {};
   if (!title) { res.json({ text: '—' }); return; }
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) { res.json({ text: 'ANTHROPIC_API_KEY חסר ב-Render Environment Variables.' }); return; }
-  const MODELS = ['claude-haiku-4-5-20251001', 'claude-haiku-3-5-20241022'];
+  // Cache hit — return instantly
+  const cacheKey = title.slice(0, 80);
+  if (summaryCache.has(cacheKey)) { res.json({ text: summaryCache.get(cacheKey) }); return; }
+  // Try models in order — stop at first success
+  const MODELS = [
+    'claude-haiku-4-5-20251001',
+    'claude-haiku-3-5-20241022',
+    'claude-sonnet-4-5-20251022'   // fallback — costs more but never overloaded
+  ];
   const prompt = `אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה הבאה. רק המשפט, ללא הסברים.\n\nכותרת: ${title}\n${desc ? 'תיאור: ' + desc : ''}`;
 
   for (const model of MODELS) {
@@ -291,7 +302,7 @@ app.post('/api/ai/summarize', async (req, res) => {
         continue;
       }
       const text = data?.content?.[0]?.text?.trim();
-      if (text) { res.json({ text }); return; }
+      if (text) { summaryCache.set(cacheKey, text); if(summaryCache.size>500) summaryCache.delete(summaryCache.keys().next().value); res.json({ text }); return; }
       res.json({ text: data?.error?.message || '—' }); return;
     } catch(e) {
       console.log(`${model} err: ${e.message}`);
