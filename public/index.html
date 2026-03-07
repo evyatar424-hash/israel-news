@@ -218,6 +218,37 @@ input[type=range]{width:100%;accent-color:var(--red)}
 .sb-blue{background:rgba(61,139,255,.1);color:var(--blue);border:1px solid rgba(61,139,255,.25)!important}
 .s-footer{text-align:center;padding:16px 0 4px;font-size:10px;color:var(--t3);line-height:2.2}
 
+
+/* SEARCH */
+.search-wrap{padding:7px 10px;border-bottom:1px solid var(--b);position:relative}
+.search-input{width:100%;background:var(--card);border:1px solid var(--b2);border-radius:12px;padding:9px 36px 9px 14px;font-family:var(--f);font-size:13px;color:var(--t);outline:none;transition:border-color .15s}
+.search-input:focus{border-color:rgba(229,62,62,.4)}
+.search-input::placeholder{color:var(--t3)}
+.search-clear{position:absolute;left:20px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--t3);font-size:16px;cursor:pointer;padding:4px;display:none}
+.search-clear.on{display:block}
+
+/* TOPIC FILTERS */
+.topics{display:flex;gap:6px;padding:7px 10px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--b)}
+.topic-chip{flex-shrink:0;display:flex;align-items:center;gap:4px;padding:5px 12px;border-radius:20px;border:1px solid var(--b2);background:none;color:var(--t3);font-family:var(--f);font-size:10px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap}
+.topic-chip.on{border-color:transparent;color:#fff}
+.topic-chip[data-t="security"].on{background:rgba(229,62,62,.85)}
+.topic-chip[data-t="politics"].on{background:rgba(139,92,246,.85)}
+.topic-chip[data-t="economy"].on{background:rgba(16,185,129,.85)}
+.topic-chip[data-t="world"].on{background:rgba(59,130,246,.85)}
+.topic-chip[data-t="all"].on{background:var(--red)}
+
+/* BREAKING BANNER */
+#breaking-banner{display:none;margin:8px 10px 0;border-radius:14px;overflow:hidden;border:1px solid rgba(229,62,62,.4);animation:fadeUp .3s ease}
+#breaking-banner.on{display:block}
+.bb-head{background:var(--red);padding:5px 13px;display:flex;align-items:center;gap:7px}
+.bb-label{font-size:9px;font-weight:900;color:#fff;letter-spacing:2px}
+.bb-count{font-size:9px;color:rgba(255,255,255,.75);margin-right:auto}
+.bb-item{padding:11px 14px;background:rgba(229,62,62,.06);border-bottom:1px solid rgba(229,62,62,.1);cursor:pointer;transition:background .15s}
+.bb-item:last-child{border-bottom:none}
+.bb-item:active{background:rgba(229,62,62,.12)}
+.bb-title{font-size:13px;font-weight:800;color:var(--t);line-height:1.4}
+.bb-sources{font-size:10px;color:var(--red);margin-top:3px;font-weight:700}
+
 /* BOTTOM NAV */
 #bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;z-index:200;background:rgba(14,17,21,.98);backdrop-filter:blur(24px);border-top:1px solid var(--b);display:flex;padding-bottom:env(safe-area-inset-bottom)}
 .nb{flex:1;padding:9px 0 8px;border:none;background:none;cursor:pointer;font-family:var(--f);font-size:9px;font-weight:600;color:var(--t3);display:flex;flex-direction:column;align-items:center;gap:3px;position:relative;transition:color .15s}
@@ -296,6 +327,18 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <span id="stxt"><span class="spinner">⟳</span> טוען...</span>
     <button id="rfbtn" onclick="loadNews(true)">⟳ רענן</button>
   </div>
+  <div class="search-wrap">
+    <input class="search-input" id="search-input" type="search" placeholder="🔍  חפש כתבה..." oninput="onSearch(this.value)" />
+    <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+  </div>
+  <div class="topics" id="topic-chips">
+    <button class="topic-chip on" data-t="all" onclick="setTopic('all')">✦ הכל</button>
+    <button class="topic-chip" data-t="security" onclick="setTopic('security')">🔴 בטחון</button>
+    <button class="topic-chip" data-t="politics" onclick="setTopic('politics')">🏛️ פוליטיקה</button>
+    <button class="topic-chip" data-t="economy" onclick="setTopic('economy')">💰 כלכלה</button>
+    <button class="topic-chip" data-t="world" onclick="setTopic('world')">🌍 עולם</button>
+  </div>
+  <div id="breaking-banner"></div>
   <div id="hero"></div>
   <div class="chips" id="chips"></div>
   <div class="live-row">
@@ -466,6 +509,59 @@ const ss=(k,v)=>{ST[k]=v;localStorage.setItem('iln10',JSON.stringify(ST));};
 ['sound','vib','auto'].forEach(k=>{if(gs(k))document.getElementById('tg-'+k)?.classList.add('on');});
 
 let items=[],cur='all',tiIdx=0,autoT=null,vol=0.8,lastKey='',alertOn=false,busy=false;
+
+// ── TOPIC FILTER ──
+const TOPIC_KEYS = {
+  security: ['צבא','חיל','קרב','מבצע','ירי','רקטות','חמאס','חיזבאללה','פיגוע','חטוף','חטופים','נפגע','שבוי','עזה','לבנון','איראן','מחבל','כוחות','לחימה','נשק','טיל','ביטחון','כיפת','שיגור','אזעקה','נהרג','נפצע','חייל','קצין','תקיפה'],
+  politics: ['ממשלה','כנסת','ראש הממשלה','נתניהו','גנץ','ליכוד','אופוזיציה','קואליציה','בחירות','שר ','שרה','חוק','תקציב','מדיניות','פוליטי','מינוי','פיטורים','הצבעה','ועדה'],
+  economy: ['כלכלה','שוק','בורסה','מניה','דולר','אינפלציה','ריבית','חברה','עסק','רווח','הפסד','גז','נפט','נדלן','עבודה','תעסוקה','שכר','יוקר','מחיר','בנק','ייצוא','ייבוא','משק'],
+  world: ['ארהב','אמריקה','אירופה','רוסיה','סין','אוקראינה','נאטו','טראמפ','ביידן','בריטניה','צרפת','גרמניה','בינלאומי','עולם','חוץ','דיפלומטיה','הסכם','ועידה']
+};
+function classifyTopic(title, desc) {
+  const text = ((title||'') + ' ' + (desc||'')).toLowerCase();
+  for (const [topic, keys] of Object.entries(TOPIC_KEYS)) {
+    if (keys.some(k => text.includes(k.toLowerCase()))) return topic;
+  }
+  return 'other';
+}
+let currentTopic = 'all';
+let searchQuery = '';
+function setTopic(t) {
+  currentTopic = t;
+  document.querySelectorAll('.topic-chip').forEach(el => el.classList.toggle('on', el.dataset.t === t));
+  buildList();
+}
+function onSearch(val) {
+  searchQuery = val.trim().toLowerCase();
+  const cb = document.getElementById('search-clear');
+  if (cb) cb.classList.toggle('on', searchQuery.length > 0);
+  buildList();
+}
+function clearSearch() {
+  const inp = document.getElementById('search-input');
+  if (inp) inp.value = '';
+  searchQuery = '';
+  const cb = document.getElementById('search-clear');
+  if (cb) cb.classList.remove('on');
+  buildList();
+}
+function detectBreaking(allItems) {
+  const bb = document.getElementById('breaking-banner');
+  if (!bb) return;
+  const groups = {};
+  allItems.forEach(item => {
+    const words = (item.title||'').split(' ').filter(w => w.length > 4).slice(0,3).join(' ');
+    if (!words || words.length < 8) return;
+    if (!groups[words]) groups[words] = { title: item.title, sources: new Set(), link: item.link };
+    groups[words].sources.add(item.sourceName);
+  });
+  const breaking = Object.values(groups).filter(g => g.sources.size >= 3).sort((a,b) => b.sources.size - a.sources.size).slice(0, 3);
+  if (!breaking.length) { bb.classList.remove('on'); bb.innerHTML=''; return; }
+  bb.innerHTML = '<div class="bb-head"><span class="bb-label">🔥 BREAKING</span><span class="bb-count">' + breaking.length + ' נושאים חמים</span></div>' +
+    breaking.map(g => '<div class="bb-item" onclick="window.open(\''+g.link+'\',\'_blank\')"><div class="bb-title">'+g.title+'</div><div class="bb-sources">מדווחים: '+[...g.sources].join(' · ')+'</div></div>').join('');
+  bb.classList.add('on');
+}
+
 const seen=new Set(),histItems=[];
 
 // Clock
@@ -583,7 +679,22 @@ async function aiSum(btn){
 // News cards
 function buildList(){
   const el=document.getElementById('nlist');
-  const list=cur==='all'?items:items.filter(x=>x.source===cur);
+  // Source filter
+  let list=cur==='all'?items:items.filter(x=>x.source===cur);
+  // Topic filter
+  if (currentTopic !== 'all') {
+    list = list.filter(x => classifyTopic(x.title, x.desc) === currentTopic);
+  }
+  // Search filter
+  if (searchQuery) {
+    list = list.filter(x => 
+      (x.title||'').toLowerCase().includes(searchQuery) ||
+      (x.desc||'').toLowerCase().includes(searchQuery) ||
+      (x.sourceName||'').toLowerCase().includes(searchQuery)
+    );
+  }
+  // Breaking detection (always on full list)
+  detectBreaking(cur==='all'?items:items.filter(x=>x.source===cur));
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">אין כתבות</div></div>';return;}
   el.innerHTML='';
   const sep=document.createElement('div');sep.className='sep';
