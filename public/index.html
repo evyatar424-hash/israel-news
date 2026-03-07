@@ -371,7 +371,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
       <button class="ap-sec-btn" onclick="apLoadHistory()">↻ רענן</button>
     </div>
     <div class="ap-hist" id="ap-hist-list">
-      <div class="ap-empty"><div class="ap-empty-ico">⏳</div>טוען היסטוריה...</div>
+      <div class="ap-empty"><div class="ap-empty-ico">🕊️</div>אין שיגורים לאחרונה</div>
     </div>
     <a href="https://t.me/CumtaAlertsChannel" target="_blank" class="ap-tg">
       <div class="ap-tg-ico">✈️</div>
@@ -493,7 +493,7 @@ function goTab(t){
   document.getElementById('panel-'+t).classList.add('on');
   document.getElementById('t-'+t).classList.add('on');
   document.getElementById('nb-'+t).classList.add('on');
-  if(t==='alerts') setTimeout(apLoadHistory, 100);
+  if(t==='alerts') setTimeout(apLoadHistory, 200);
 }
 
 function tog(k){const v=!gs(k);ss(k,v);const e=document.getElementById('tg-'+k);v?e.classList.add('on'):e.classList.remove('on');if(k==='auto')v?startAuto():stopAuto();}
@@ -765,6 +765,7 @@ function connectStream(){
       clearTimeout(timeout);
       sseRetries=0;
       setConn('ok');
+      apLoadHistory();
     };
     es.onmessage=e=>{
       clearTimeout(timeout);
@@ -997,10 +998,20 @@ function apRenderHistory(items){
 }
 async function apLoadHistory(){
   const el=document.getElementById('ap-hist-list');
-  if(el)el.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">⏳</div>טוען...</div>';
-  try{const r=await fetch('/api/alerts/history');const d=await r.json();if(Array.isArray(d)&&d.length>0){apRenderHistory(d);return;}}catch(e){}
-  try{const r2=await fetch('/api/alerts/oref-history');const d2=await r2.json();if(Array.isArray(d2)&&d2.length>0){apRenderHistory(d2);return;}}catch(e){}
-  const el2=document.getElementById('ap-hist-list');if(el2)el2.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">🕊️</div>אין נתוני שיגורים כרגע</div>';
+  if(el)el.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">⏳</div>טוען היסטוריה...</div>';
+  // 1. local cache from server
+  try{
+    const r=await fetch('/api/alerts/history');
+    if(r.ok){const d=await r.json();if(Array.isArray(d)&&d.length>0){apRenderHistory(d);return;}}
+  }catch(e){}
+  // 2. oref history proxy
+  try{
+    const r2=await fetch('/api/alerts/oref-history');
+    if(r2.ok){const d2=await r2.json();if(Array.isArray(d2)&&d2.length>0){apRenderHistory(d2);return;}}
+  }catch(e){}
+  // 3. empty state
+  const el2=document.getElementById('ap-hist-list');
+  if(el2)el2.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">🕊️</div><div style="font-size:14px;font-weight:700;margin-bottom:4px">אין שיגורים לאחרונה</div><div style="font-size:11px;opacity:0.6">המערכת מחוברת ופעילה.<br>אירועים יופיעו כאן בזמן אמת.</div></div>';
 }
 // New UI is fed via patched setConn / triggerAlert / clearAlertUI
 
