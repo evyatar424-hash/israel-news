@@ -17,7 +17,7 @@
   gtag('config', 'G-ES5DVG0SV7');
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות IL — v9.0</title>
+<title>חדשות IL — v10.0</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{
@@ -829,7 +829,7 @@ async function loadNews(manual=false){
   const btn=document.getElementById('rfbtn'),stxt=document.getElementById('stxt');
   if(manual){btn.disabled=true;btn.innerHTML='<span class="spinner">⟳</span>';}
   try{
-    const r=await fetch('/api/news?t='+Date.now());
+    const r=await fetch('/api/news?t='+Date.now(),{signal:AbortSignal.timeout(15000)});
     const d=await r.json();
     if(d.items&&d.items.length){
       items=d.items;
@@ -842,7 +842,7 @@ async function loadNews(manual=false){
       }
       buildChips();buildList();rotateTicker();
     }
-  }catch(e){if(manual)stxt.textContent='שגיאת חיבור';}
+  }catch(e){console.error('loadNews error:',e);stxt.textContent='⚠️ '+e.message.slice(0,40);busy=false;}
   if(manual){btn.disabled=false;btn.innerHTML='⟳ רענן';}
   busy=false;
 }
