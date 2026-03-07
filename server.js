@@ -129,13 +129,20 @@ function isRealImage(url, sourceId) {
 function extractImage(item, sourceId) {
   try {
     const candidates = [];
+    // Priority 1: media tags
     if (item['media:content']?.$?.url) candidates.push(item['media:content'].$.url);
     if (item['media:thumbnail']?.$?.url) candidates.push(item['media:thumbnail'].$.url);
+    // Priority 2: enclosure
     if (item.enclosure?.url && item.enclosure?.type?.startsWith('image')) candidates.push(item.enclosure.url);
-    const html = item.content || item['content:encoded'] || item.summary || '';
-    const m = html.match(/<img[^>]+src=["']([^"']{20,})["']/);
-    if (m) candidates.push(m[1]);
-    for (const c of candidates) if (isRealImage(c, sourceId)) return c;
+    if (item.enclosure?.url && !item.enclosure?.type) candidates.push(item.enclosure.url); // some feeds omit type
+    // Priority 3: img tags in HTML content
+    const html = item.content || item['content:encoded'] || item.summary || item.description || '';
+    const imgs = [...html.matchAll(/<img[^>]+src=["']([^"']{20,})["']/g)].map(m=>m[1]);
+    candidates.push(...imgs.slice(0,3));
+    // Priority 4: srcset
+    const srcset = html.match(/srcset=["']([^"' ,]{20,})/);
+    if (srcset) candidates.push(srcset[1]);
+    for (const url of candidates) if (isRealImage(url, sourceId)) return url;
   } catch(e) {}
   return null;
 }
@@ -169,7 +176,10 @@ async function fetchWithProxy(url) {
         items: data.items.map(i => ({
           title: i.title, link: i.link, pubDate: i.pubDate,
           contentSnippet: i.description?.replace(/<[^>]+>/g,'').slice(0,200),
-          'media:content': i.enclosure?.link ? { $: { url: i.enclosure.link } } : undefined,
+          'media:content': (i.thumbnail && i.thumbnail.length > 10) ? { $: { url: i.thumbnail } } :
+                           (i.enclosure?.link ? { $: { url: i.enclosure.link } } : undefined),
+          'media:thumbnail': (i.thumbnail && i.thumbnail.length > 10) ? { $: { url: i.thumbnail } } : undefined,
+          content: i.content || '',
           guid: i.guid
         }))
       };
