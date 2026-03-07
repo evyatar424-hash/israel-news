@@ -1,8 +1,8 @@
-const CACHE = 'chadashot-il-v6';
-const STATIC = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const CACHE = 'hdshot-il-v3';
+const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(STATIC)).catch(()=>{}));
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)));
   self.skipWaiting();
 });
 
@@ -14,39 +14,49 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  const url = new URL(e.request.url);
-  // Network first for API calls
-  if (url.pathname.startsWith('/api/')) {
-    e.respondWith(
-      fetch(e.request).catch(() => new Response(JSON.stringify({items:[],error:'offline'}), {headers:{'Content-Type':'application/json'}}))
-    );
-    return;
-  }
-  // Cache first for static assets
+  if (e.request.method !== 'GET') return;
+  if (e.request.url.includes('/api/')) return; // Never cache API
   e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
-      return fetch(e.request).then(res => {
-        if (res.ok) {
-          const clone = res.clone();
-          caches.open(CACHE).then(c => c.put(e.request, clone));
-        }
-        return res;
-      }).catch(() => caches.match('/'));
-    })
+    caches.match(e.request).then(cached => cached || fetch(e.request))
   );
 });
 
-// Push notifications for alerts
+// ── PUSH NOTIFICATIONS ──
 self.addEventListener('push', e => {
-  const data = e.data?.json() || {};
-  self.registration.showNotification(data.title || '🚨 אזעקה', {
-    body: data.body || '',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    vibrate: [300, 100, 300, 100, 300],
+  let data = {};
+  try { data = e.data ? e.data.json() : {}; } catch(err) {}
+
+  const title  = data.title  || '🚨 אזעקה';
+  const options = {
+    body:               data.body   || 'אזעקה פעילה',
+    icon:               data.icon   || '/icon-192.png',
+    badge:              data.badge  || '/icon-192.png',
+    vibrate:            data.vibrate || [300, 100, 300, 100, 300],
     requireInteraction: true,
-    dir: 'rtl',
-    tag: 'alert'
-  });
+    dir:                'rtl',
+    lang:               'he',
+    tag:                'alert',          // replace previous notification
+    renotify:           true,
+    data:               data.data || { url: '/' }
+  };
+
+  e.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Click on notification → open/focus the app
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/';
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      for (const client of list) {
+        if (client.url.includes(self.location.origin)) {
+          client.focus();
+          client.postMessage({ type: 'ALERT_CLICK', url });
+          return;
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
 });
