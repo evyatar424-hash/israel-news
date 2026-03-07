@@ -912,7 +912,7 @@ function updateNotifStatus(){
     return;
   }
   if(Notification.permission==='granted'){
-    if(status)status.textContent='✅ התראות מופעלות';
+    if(status)status.textContent='✅ התראות Push מופעלות — גם כשהאפליקציה סגורה';
     if(btn){btn.textContent='מופעל ✓';btn.style.background='var(--green)';btn.disabled=true;}
   } else if(Notification.permission==='denied'){
     if(status)status.textContent='❌ חסום — שנה בהגדרות הדפדפן';
@@ -923,15 +923,58 @@ function updateNotifStatus(){
 async function requestNotifications(){
   if(!('Notification' in window))return;
   const perm = await Notification.requestPermission();
-  updateNotifStatus();
   if(perm==='granted'){
-    new Notification('חדשות IL 🔔',{
-      body:'התראות אזעקות מופעלות! תקבל התראה מיידית.',
-      icon:'/icon-192.png',
-      dir:'rtl'
-    });
-    localStorage.setItem('notif','granted');
+    await subscribePush();
+    updateNotifStatus();
+  } else {
+    updateNotifStatus();
   }
+}
+
+async function subscribePush(){
+  try{
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    const reg = await navigator.serviceWorker.ready;
+    // Get VAPID public key from server
+    const keyRes = await fetch('/api/push/vapid-key');
+    const { publicKey } = await keyRes.json();
+    // Convert base64url to Uint8Array
+    const vapidKey = urlBase64ToUint8Array(publicKey);
+    let sub = await reg.pushManager.getSubscription();
+    if(!sub){
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: vapidKey
+      });
+    }
+    // Send subscription to server
+    await fetch('/api/push/subscribe', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(sub.toJSON())
+    });
+    console.log('Push subscription saved');
+    // Show confirmation notification
+    const n = new Notification('חדשות IL 🔔',{
+      body:'אזעקות ישלחו אליך ישירות, גם כשהאפליקציה סגורה!',
+      icon:'/icon-192.png', dir:'rtl'
+    });
+    setTimeout(()=>n.close(),4000);
+  }catch(e){
+    console.warn('Push subscribe failed:', e.message);
+    // Fallback — still show browser notification
+    new Notification('חדשות IL 🔔',{
+      body:'התראות אזעקות מופעלות!',
+      icon:'/icon-192.png', dir:'rtl'
+    });
+  }
+}
+
+function urlBase64ToUint8Array(base64String){
+  const padding='='.repeat((4-base64String.length%4)%4);
+  const base64=(base64String+padding).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=window.atob(base64);
+  return Uint8Array.from([...raw].map(c=>c.charCodeAt(0)));
 }
 
 // Send notification when alert arrives
