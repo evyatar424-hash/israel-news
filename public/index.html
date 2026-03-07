@@ -327,6 +327,8 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <span id="stxt"><span class="spinner">⟳</span> טוען...</span>
     <button id="rfbtn" onclick="loadNews(true)">⟳ רענן</button>
   </div>
+  <div id="hero"></div>
+  <div class="chips" id="chips"></div>
   <div class="search-wrap">
     <input class="search-input" id="search-input" type="search" placeholder="🔍  חפש כתבה..." oninput="onSearch(this.value)" />
     <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
@@ -339,8 +341,6 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <button class="topic-chip" data-t="world" onclick="setTopic('world')">🌍 עולם</button>
   </div>
   <div id="breaking-banner"></div>
-  <div id="hero"></div>
-  <div class="chips" id="chips"></div>
   <div class="live-row">
     <button class="lc-card" onclick="openLive('https://www.kan.org.il/live/','כאן 11')">
       <div class="lc-inner" style="background:#0a1628;color:#fff">
