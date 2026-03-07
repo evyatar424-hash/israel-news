@@ -391,9 +391,39 @@ app.get('/api/alerts/history', (req, res) => {
   res.json(alertHistory);
 });
 
-// Oref history — return local cache (oref JSON is geo-blocked from US IPs)
-app.get('/api/alerts/oref-history', (req, res) => {
-  res.json(alertHistory.slice(0, 30));
+// Tzevaadom alerts-history — public API, works from any IP, real historical data
+app.get('/api/alerts/oref-history', async (req, res) => {
+  try {
+    const r = await fetch('https://api.tzevaadom.co.il/alerts-history', {
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      signal: AbortSignal.timeout(8000)
+    });
+    const data = await r.json();
+    if (!Array.isArray(data) || data.length === 0) {
+      res.json(alertHistory.slice(0, 30)); return;
+    }
+    // tzevaadom format: [{id, alerts:[{time(unix), cities:[], threat, isDrill}]}]
+    // threat: 0=ירי רקטות, 1=חדירת כלי טיס, 2=רעידת אדמה, 3=חומרים מסוכנים, 5=חדירת מחבלים
+    const threatNames = {0:'ירי רקטות',1:'חדירת כלי טיס עוין',2:'רעידת אדמה',3:'חומרים מסוכנים',4:'צונאמי',5:'חדירת מחבלים',6:'אירוע רדיולוגי',7:'אירוע לא קונבנציונלי',13:'אירוע בטחוני'};
+    const normalized = [];
+    data.slice(0, 30).forEach(event => {
+      if (!event.alerts) return;
+      event.alerts.forEach(a => {
+        if (a.isDrill) return;
+        normalized.push({
+          alertDate: new Date(a.time * 1000).toISOString(),
+          title: threatNames[a.threat] || 'אזעקה',
+          data: a.cities || [],
+          id: event.id + '_' + a.time
+        });
+      });
+    });
+    normalized.sort((a,b) => new Date(b.alertDate) - new Date(a.alertDate));
+    res.json(normalized.slice(0, 50));
+  } catch(e) {
+    console.log('tzevaadom history err:', e.message);
+    res.json(alertHistory.slice(0, 30));
+  }
 });
 
 app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected, oref: orefConnected }));
