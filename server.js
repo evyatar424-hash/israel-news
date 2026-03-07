@@ -81,26 +81,43 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const parser = new Parser({
-  timeout: 12000,
+  timeout: 8000,
   customFields: { item: ['media:content','media:thumbnail','enclosure'] },
-  headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148' }
+  headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' }
 });
 
 const CHANNELS = [
-  { id:'ynet',     name:'ynet',         color:'#E8001E', icon:'📰', url:'https://www.ynet.co.il/Integration/StoryRss2.xml',                        limit:5 },
-  { id:'ynet_war', name:'ynet מלחמה',   color:'#ff4444', icon:'🔴', url:'https://www.ynet.co.il/Integration/StoryRss2784.xml',                     limit:4 },
-  { id:'walla',    name:'וואלה',        color:'#FF6B00', icon:'🔥', url:'https://rss.walla.co.il/feed/22',                                          limit:3 },
-  { id:'walla_w',  name:'וואלה ביטחון', color:'#cc5500', icon:'⚔️', url:'https://rss.walla.co.il/feed/2686',                                       limit:3 },
-  { id:'walla_econ',name:'וואלה כלכלה', color:'#15803d', icon:'💹', url:'https://rss.walla.co.il/feed/9',                                             limit:3 },
-  { id:'ch12',     name:'חדשות 12',     color:'#C8102E', icon:'📺', url:'https://news.google.com/rss/search?q=site:n12.co.il&hl=he&gl=IL&ceid=IL:iw', limit:5 },
-  { id:'ch13',     name:'רשת 13',       color:'#7C3AED', icon:'📡', url:'https://news.google.com/rss/search?q=site:13tv.co.il&hl=he&gl=IL&ceid=IL:iw',  limit:5 },
-  { id:'ch14',     name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://www.now14.co.il/feed/',                                            limit:5 },
-  { id:'mako',     name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://news.google.com/rss/search?q=site:mako.co.il&hl=he&gl=IL&ceid=IL:iw', limit:3 },
-  { id:'maariv',   name:'מעריב',        color:'#0891B2', icon:'🗞️', url:'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',                   limit:4 },
-  { id:'haaretz',  name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/rss---feedly',                                    limit:3 },
-  { id:'idf',      name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://news.google.com/rss/search?q=%D7%93%D7%95%D7%91%D7%A8+%D7%A6%D7%91%D7%90&hl=he&gl=IL&ceid=IL:iw',                                                  limit:3 },
-  { id:'srugim',   name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://www.srugim.co.il/feed',                                               limit:3 },
+  { id:'ynet',      name:'ynet',         color:'#E8001E', icon:'📰', url:'https://www.ynet.co.il/Integration/StoryRss2.xml',                           limit:5 },
+  { id:'ynet_war',  name:'ynet מלחמה',   color:'#ff4444', icon:'🔴', url:'https://www.ynet.co.il/Integration/StoryRss2784.xml',                        limit:4 },
+  { id:'walla',     name:'וואלה',        color:'#FF6B00', icon:'🔥', url:'https://rss.walla.co.il/feed/22',                                             limit:3 },
+  { id:'walla_w',   name:'וואלה ביטחון', color:'#cc5500', icon:'⚔️', url:'https://rss.walla.co.il/feed/2686',                                          limit:3 },
+  { id:'walla_econ',name:'וואלה כלכלה',  color:'#15803d', icon:'💹', url:'https://rss.walla.co.il/feed/9',                                              limit:3 },
+  { id:'ch12',      name:'חדשות 12',     color:'#C8102E', icon:'📺', url:'https://news.google.com/rss/search?q=site:n12.co.il&hl=he&gl=IL&ceid=IL:iw',  limit:5 },
+  { id:'ch13',      name:'רשת 13',       color:'#7C3AED', icon:'📡', url:'https://news.google.com/rss/search?q=site:13tv.co.il&hl=he&gl=IL&ceid=IL:iw', limit:5 },
+  { id:'ch14',      name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://www.now14.co.il/feed/',                                               limit:5 },
+  { id:'mako',      name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://rss.mako.co.il/rss/News-law-and-order.xml',                           limit:3 },
+  { id:'maariv',    name:'מעריב',        color:'#0891B2', icon:'🗞️', url:'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',                      limit:4 },
+  { id:'haaretz',   name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/rss---feedly',                                  limit:3 },
+  { id:'idf',       name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://www.idf.il/rss/',                                                     limit:3 },
+  { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://www.srugim.co.il/feed',                                               limit:3 },
 ];
+
+// Circuit breaker — skip channels that keep failing
+const channelFailures = {};
+const FAIL_COOLDOWN = 4 * 60 * 1000; // 4 min
+function shouldSkip(id) {
+  const f = channelFailures[id];
+  if (!f) return false;
+  if (f.count >= 3 && Date.now() - f.lastFail < FAIL_COOLDOWN) { console.log(`SKIP ${id} (circuit open)`); return true; }
+  if (Date.now() - f.lastFail > FAIL_COOLDOWN) { delete channelFailures[id]; return false; }
+  return false;
+}
+function recordFail(id) {
+  if (!channelFailures[id]) channelFailures[id] = { count:0, lastFail:0 };
+  channelFailures[id].count++;
+  channelFailures[id].lastFail = Date.now();
+}
+function recordSuccess(id) { delete channelFailures[id]; }
 
 // Block known logo/placeholder images
 const BAD_PATTERNS = [
@@ -221,11 +238,13 @@ async function readGithubCache() {
 }
 
 async function fetchChannel(ch) {
+  if (shouldSkip(ch.id)) return [];
   try {
     const feed = PROXY_CHANNELS.has(ch.id)
       ? await fetchWithProxy(ch.url)
       : await parser.parseURL(ch.url);
     if (!feed || !feed.items) return [];
+    recordSuccess(ch.id);
     return (feed.items || []).slice(0, ch.limit || 5).map((item, i) => ({
       id: ch.id + '_' + (item.guid || item.link || i),
       source: ch.id, sourceName: ch.name, sourceColor: ch.color, sourceIcon: ch.icon,
@@ -237,7 +256,8 @@ async function fetchChannel(ch) {
       ts: new Date(item.pubDate || item.isoDate).getTime() || (Date.now() - i * 60000)
     }));
   } catch(e) {
-    console.log(`ERR ${ch.name}: ${e.message.slice(0,80)}`);
+    recordFail(ch.id);
+    console.log(`ERR ${ch.name}: ${e.message.slice(0,60)}`);
     return [];
   }
 }
