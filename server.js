@@ -279,7 +279,7 @@ app.post('/api/ai/summarize', async (req, res) => {
   const MODELS = [
     'claude-haiku-4-5-20251001',
     'claude-haiku-3-5-20241022',
-    'claude-sonnet-4-5-20251022'   // fallback — costs more but never overloaded
+    'claude-sonnet-4-5'   // fallback — costs more but never overloaded
   ];
   const prompt = `אתה עורך חדשות ישראלי. כתוב משפט אחד קצר וחד בעברית שמסכם את הכתבה הבאה. רק המשפט, ללא הסברים.\n\nכותרת: ${title}\n${desc ? 'תיאור: ' + desc : ''}`;
 
@@ -296,14 +296,25 @@ app.post('/api/ai/summarize', async (req, res) => {
         signal: AbortSignal.timeout(10000)
       });
       const data = await apiRes.json();
-      // 529 = overloaded, try next model
+      console.log(`${model} status:${apiRes.status} err:${data?.error?.type||'none'} content:${JSON.stringify(data?.content?.[0])?.slice(0,80)}`);
+      // 529 = overloaded, 529/overload_error = try next
       if (apiRes.status === 529 || data?.error?.type === 'overloaded_error') {
         console.log(`${model} overloaded, trying next...`);
         continue;
       }
+      // Any other error — try next model too
+      if (data?.error) {
+        console.log(`${model} error: ${data.error.type} — ${data.error.message}`);
+        continue;
+      }
       const text = data?.content?.[0]?.text?.trim();
-      if (text) { summaryCache.set(cacheKey, text); if(summaryCache.size>500) summaryCache.delete(summaryCache.keys().next().value); res.json({ text }); return; }
-      res.json({ text: data?.error?.message || '—' }); return;
+      if (text) {
+        summaryCache.set(cacheKey, text);
+        if(summaryCache.size>500) summaryCache.delete(summaryCache.keys().next().value);
+        res.json({ text });
+        return;
+      }
+      continue; // empty text — try next model
     } catch(e) {
       console.log(`${model} err: ${e.message}`);
     }
