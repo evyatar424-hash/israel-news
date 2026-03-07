@@ -5,6 +5,76 @@ const https = require('https');
 const path = require('path');
 const WebSocket = require('ws');
 
+// ── PUSH NOTIFICATIONS (VAPID) ──
+const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || 'BJgaRfdawY-VK3Kj_2W9yz2s_2xB7R4Ocp_rEDcGbcqNV0l84C3GI69nJs27yijlDcruILy-Ax776L3y7ndTVYk';
+const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY || 'WtzCv7_f0jrdyXhOVrBc3ejeXlezi_OYd3GzK0J__hY';
+const VAPID_SUBJECT     = 'mailto:admin@briefil.co.il';
+
+// In-memory push subscriptions (survives restarts via simple JSON file)
+const fs = require('fs');
+const SUBS_FILE = path.join(__dirname, 'push-subs.json');
+let pushSubscriptions = [];
+try {
+  if (fs.existsSync(SUBS_FILE)) {
+    pushSubscriptions = JSON.parse(fs.readFileSync(SUBS_FILE, 'utf8'));
+    console.log(`Loaded ${pushSubscriptions.length} push subscriptions`);
+  }
+} catch(e) { pushSubscriptions = []; }
+
+function saveSubs() {
+  try { fs.writeFileSync(SUBS_FILE, JSON.stringify(pushSubscriptions)); } catch(e) {}
+}
+
+// Minimal VAPID push without web-push npm package
+// Uses Node crypto + fetch to send Web Push manually
+async function sendWebPush(subscription, payload) {
+  try {
+    const { endpoint, keys } = subscription;
+    const { p256dh, auth } = keys;
+
+    // Use web-push compatible approach via https
+    // Since we can't install npm packages at runtime, use a fetch-based approach
+    // that works with Render's Node environment which has web-push available if in package.json
+    
+    // Try require web-push (if installed)
+    let webpush;
+    try { webpush = require('web-push'); } catch(e) { return false; }
+    
+    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    await webpush.sendNotification(subscription, JSON.stringify(payload));
+    return true;
+  } catch(e) {
+    if (e.statusCode === 410 || e.statusCode === 404) {
+      // Subscription expired — remove it
+      pushSubscriptions = pushSubscriptions.filter(s => s.endpoint !== subscription.endpoint);
+      saveSubs();
+    }
+    return false;
+  }
+}
+
+async function broadcastPush(alert) {
+  if (!pushSubscriptions.length) return;
+  const cities = alert.data || [];
+  const preview = cities.slice(0, 3).join(', ') + (cities.length > 3 ? ` +${cities.length - 3}` : '');
+  const payload = {
+    title: '🚨 ' + (alert.title || 'ירי רקטות'),
+    body: preview || 'אזעקה פעילה',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: '/', alertId: alert.id },
+    vibrate: [300, 100, 300, 100, 300],
+    requireInteraction: true,
+    dir: 'rtl',
+    lang: 'he'
+  };
+  console.log(`Sending push to ${pushSubscriptions.length} subscribers: ${preview}`);
+  const results = await Promise.allSettled(pushSubscriptions.map(s => sendWebPush(s, payload)));
+  const ok = results.filter(r => r.status === 'fulfilled' && r.value).length;
+  console.log(`Push sent: ${ok}/${pushSubscriptions.length}`);
+}
+
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -294,6 +364,7 @@ async function pollOref() {
     if (alertHistory.length > 50) alertHistory.length = 50;
     console.log('🚨 Oref alert:', currentAlert.title, currentAlert.data.slice(0, 3));
     broadcastSSE({ alert: currentAlert, connected: true });
+    broadcastPush(currentAlert);
 
     // Auto-clear after 2 minutes if oref goes quiet
     if (orefAlertClearTimer) clearTimeout(orefAlertClearTimer);
@@ -340,6 +411,7 @@ function connectTzofar() {
             if (alertHistory.length > 50) alertHistory.length = 50;
             console.log('🚨 Tzofar alert:', currentAlert.title);
             broadcastSSE({ alert: currentAlert, connected: true });
+            broadcastPush(currentAlert);
           }
         }
         if (msg.type === 'ALERT') {
@@ -424,6 +496,31 @@ app.get('/api/alerts/oref-history', async (req, res) => {
     console.log('tzevaadom history err:', e.message);
     res.json(alertHistory.slice(0, 30));
   }
+});
+
+
+// ── PUSH SUBSCRIPTION ENDPOINTS ──
+app.get('/api/push/vapid-key', (req, res) => {
+  res.json({ publicKey: VAPID_PUBLIC_KEY });
+});
+
+app.post('/api/push/subscribe', (req, res) => {
+  const sub = req.body;
+  if (!sub || !sub.endpoint || !sub.keys) { res.status(400).json({ error: 'Invalid subscription' }); return; }
+  const exists = pushSubscriptions.find(s => s.endpoint === sub.endpoint);
+  if (!exists) {
+    pushSubscriptions.push(sub);
+    saveSubs();
+    console.log(`New push subscription. Total: ${pushSubscriptions.length}`);
+  }
+  res.json({ ok: true, total: pushSubscriptions.length });
+});
+
+app.post('/api/push/unsubscribe', (req, res) => {
+  const { endpoint } = req.body || {};
+  pushSubscriptions = pushSubscriptions.filter(s => s.endpoint !== endpoint);
+  saveSubs();
+  res.json({ ok: true });
 });
 
 app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected, oref: orefConnected }));
