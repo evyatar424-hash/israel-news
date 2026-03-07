@@ -25,10 +25,10 @@ const CHANNELS = [
   { id:'ch12',     name:'חדשות 12',     color:'#C8102E', icon:'📺', url:'https://news.google.com/rss/search?q=site:n12.co.il&hl=he&gl=IL&ceid=IL:iw', limit:5 },
   { id:'ch13',     name:'רשת 13',       color:'#7C3AED', icon:'📡', url:'https://news.google.com/rss/search?q=site:13tv.co.il&hl=he&gl=IL&ceid=IL:iw',  limit:5 },
   { id:'ch14',     name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://www.now14.co.il/feed/',                                            limit:5 },
-  { id:'mako',     name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://news.google.com/rss/search?q=site:mako.co.il+בידור&hl=he&gl=IL&ceid=IL:iw', limit:3 },
+  { id:'mako',     name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://rcs.mako.co.il/rss/31750-936012-50.xml', limit:3 },
   { id:'maariv',   name:'מעריב',        color:'#0891B2', icon:'🗞️', url:'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',                   limit:4 },
   { id:'haaretz',  name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/rss---feedly',                                    limit:3 },
-  { id:'idf',      name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://www.idf.il/rss/default-rss.xml',                                                  limit:3 },
+  { id:'idf',      name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://www.idf.il/rss/',                                                  limit:3 },
   { id:'srugim',   name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://www.srugim.co.il/feed',                                               limit:3 },
 ];
 
@@ -391,23 +391,9 @@ app.get('/api/alerts/history', (req, res) => {
   res.json(alertHistory);
 });
 
-// Oref history proxy — fetches from pikud haoref official API
-app.get('/api/alerts/oref-history', async (req, res) => {
-  try {
-    const r = await fetch('https://www.oref.org.il/warningMessages/alert/History/AlertsHistory.json', {
-      headers: {
-        'Referer': 'https://www.oref.org.il/',
-        'X-Requested-With': 'XMLHttpRequest',
-        'User-Agent': 'Mozilla/5.0'
-      },
-      signal: AbortSignal.timeout(8000)
-    });
-    const data = await r.json();
-    res.json(Array.isArray(data) ? data.slice(0, 50) : []);
-  } catch(e) {
-    console.log('Oref history err:', e.message);
-    res.json([]);
-  }
+// Oref history — return local cache (oref JSON is geo-blocked from US IPs)
+app.get('/api/alerts/oref-history', (req, res) => {
+  res.json(alertHistory.slice(0, 30));
 });
 
 app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected, oref: orefConnected }));
