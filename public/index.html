@@ -493,6 +493,7 @@ function goTab(t){
   document.getElementById('panel-'+t).classList.add('on');
   document.getElementById('t-'+t).classList.add('on');
   document.getElementById('nb-'+t).classList.add('on');
+  if(t==='alerts') setTimeout(apLoadHistory, 100);
 }
 
 function tog(k){const v=!gs(k);ss(k,v);const e=document.getElementById('tg-'+k);v?e.classList.add('on'):e.classList.remove('on');if(k==='auto')v?startAuto():stopAuto();}
@@ -509,15 +510,11 @@ function closeLive(){document.getElementById('pl-frame').src='';document.getElem
 // Channel info
 const CH={
   ynet:{n:'ynet',c:'#E8001E',i:'📰'},ynet_war:{n:'ynet מלחמה',c:'#ff4444',i:'🔴'},
-  walla:{n:'וואלה',c:'#FF6B00',i:'🔥'},walla_w:{n:'וואלה ביטחון',c:'#cc5500',i:'⚔️'},
-  toi:{n:'Times of Israel',c:'#2563EB',i:'🌍'},ch12:{n:'חדשות 12',c:'#C8102E',i:'📺'},
+  walla:{n:'וואלה',c:'#FF6B00',i:'🔥'},walla_w:{n:'וואלה ביטחון',c:'#cc5500',i:'⚔️'},ch12:{n:'חדשות 12',c:'#C8102E',i:'📺'},
   ch13:{n:'רשת 13',c:'#7C3AED',i:'📡'},
-  walla_news:{n:'וואלה חדשות',c:'#1a56db',i:'📻'},
-  calcalist:{n:'כלכליסט',c:'#e11d48',i:'💼'},
-  jpost:{n:'Jerusalem Post',c:'#003399',i:'🌍'},
-  walla_tech:{n:'וואלה טק',c:'#FF6B00',i:'💻'},ch14:{n:'ערוץ 14',c:'#d97706',i:'🦅'},
+  walla_econ:{n:'וואלה כלכלה',c:'#15803d',i:'💹'},ch14:{n:'ערוץ 14',c:'#d97706',i:'🦅'},
   mako:{n:'מאקו',c:'#e11d48',i:'🎬'},maariv:{n:'מעריב',c:'#0891B2',i:'🗞️'},
-  haaretz:{n:'הארץ',c:'#555',i:'📜'},inn:{n:'ערוץ 7',c:'#1565c0',i:'✡️'},
+  haaretz:{n:'הארץ',c:'#555',i:'📜'},
   idf:{n:'דובר צבא',c:'#16a34a',i:'🪖'},
 };
 const NO_IMG=new Set(['walla','walla_w','maariv']);
