@@ -81,7 +81,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const parser = new Parser({
-  timeout: 8000,
+  timeout: 6000,
   customFields: { item: ['media:content','media:thumbnail','enclosure'] },
   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' }
 });
@@ -104,11 +104,15 @@ const CHANNELS = [
 
 // Circuit breaker — skip channels that keep failing
 const channelFailures = {};
-const FAIL_COOLDOWN = 4 * 60 * 1000; // 4 min
+const FAIL_COOLDOWN = 2 * 60 * 1000; // 2 min cooldown
+const FAIL_THRESHOLD = 5; // צריך 5 כישלונות לפני חסימה
 function shouldSkip(id) {
   const f = channelFailures[id];
   if (!f) return false;
-  if (f.count >= 3 && Date.now() - f.lastFail < FAIL_COOLDOWN) { console.log(`SKIP ${id} (circuit open)`); return true; }
+  if (f.count >= FAIL_THRESHOLD && Date.now() - f.lastFail < FAIL_COOLDOWN) {
+    console.log(`SKIP ${id} (circuit open, ${f.count} fails)`);
+    return true;
+  }
   if (Date.now() - f.lastFail > FAIL_COOLDOWN) { delete channelFailures[id]; return false; }
   return false;
 }
@@ -218,7 +222,7 @@ async function fetchWithProxy(url) {
   throw new Error('All proxies failed');
 }
 
-const PROXY_CHANNELS = new Set(['ch12','ch12b','ch13','ch14','kan','kan_news']);
+const PROXY_CHANNELS = new Set(['ch14']); // רק now14 צריך fallback לפעמים
 
 // Read GitHub Actions cache for blocked channels
 async function readGithubCache() {
@@ -264,6 +268,11 @@ async function fetchChannel(ch) {
 
 let newsCache = [], cacheTime = 0;
 async function refreshNews() {
+  // Reset very old failures on each refresh cycle
+  const now = Date.now();
+  Object.keys(channelFailures).forEach(id => {
+    if (now - channelFailures[id].lastFail > 10 * 60 * 1000) delete channelFailures[id];
+  });
   // Direct channels (not blocked)
   const directChannels = CHANNELS.filter(ch => !PROXY_CHANNELS.has(ch.id));
   const results = await Promise.allSettled(directChannels.map(ch => fetchChannel(ch)));
