@@ -95,11 +95,11 @@ const CHANNELS = [
   { id:'ch12',      name:'חדשות 12',     color:'#C8102E', icon:'📺', url:'https://news.google.com/rss/search?q=site:n12.co.il&hl=he&gl=IL&ceid=IL:iw',  limit:5 },
   { id:'ch13',      name:'רשת 13',       color:'#7C3AED', icon:'📡', url:'https://news.google.com/rss/search?q=site:13tv.co.il&hl=he&gl=IL&ceid=IL:iw', limit:5 },
   { id:'ch14',      name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://news.google.com/rss/search?q=site:now14.co.il&hl=he&gl=IL&ceid=IL:iw',                                               limit:5 },
-  { id:'mako',      name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://news.google.com/rss/search?q=site:mako.co.il+חדשות&hl=he&gl=IL&ceid=IL:iw',                           limit:3 },
+  { id:'mako',      name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://news.google.com/rss/search?q=site:mako.co.il&hl=he&gl=IL&ceid=IL:iw',                           limit:3 },
   { id:'maariv',    name:'מעריב',        color:'#0891B2', icon:'🗞️', url:'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',                      limit:4 },
   { id:'haaretz',   name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/rss---feedly',                                  limit:3 },
   { id:'idf',       name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://news.google.com/rss/search?q=%D7%93%D7%95%D7%91%D7%A8+%D7%A6%D7%91%D7%90+IDF&hl=he&gl=IL&ceid=IL:iw',                                                     limit:3 },
-  { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://www.srugim.co.il/feed',                                               limit:3 },
+  { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://news.google.com/rss/search?q=site:srugim.co.il&hl=he&gl=IL&ceid=IL:iw',                                               limit:3 },
 ];
 
 // No circuit breaker — simple timeout per channel handles failures
