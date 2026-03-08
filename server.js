@@ -100,6 +100,9 @@ const CHANNELS = [
   { id:'haaretz',   name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/rss---feedly',                                  limit:3 },
   { id:'idf',       name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://news.google.com/rss/search?q=%D7%93%D7%95%D7%91%D7%A8+%D7%A6%D7%91%D7%90+IDF&hl=he&gl=IL&ceid=IL:iw',                                                     limit:3 },
   { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://news.google.com/rss/search?q=site:srugim.co.il&hl=he&gl=IL&ceid=IL:iw',                                               limit:3 },
+  { id:'calcalist', name:'כלכליסט',       color:'#0f4c8a', icon:'💼', url:'https://www.calcalist.co.il/GeneralRSS/0,15910,L-8,00.xml',                   limit:4 },
+  { id:'globes',    name:'גלובס',         color:'#006633', icon:'📊', url:'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=1',      limit:4 },
+  { id:'kan',       name:'כאן 11',        color:'#1a56db', icon:'📻', url:'https://www.kan.org.il/rss/rssFeeder.aspx?id=1',                               limit:3 },
 ];
 
 // No circuit breaker — simple timeout per channel handles failures
@@ -113,7 +116,7 @@ const BAD_PATTERNS = [
 ];
 
 // Sources that NEVER have real images — skip image entirely
-const NO_IMAGE_SOURCES = new Set(['walla', 'walla_w', 'maariv']);
+const NO_IMAGE_SOURCES = new Set(['maariv']);
 
 function isRealImage(url, sourceId) {
   if (!url || url.length < 12) return false;
@@ -144,9 +147,38 @@ function extractImage(item, sourceId) {
     // Priority 4: srcset
     const srcset = html.match(/srcset=["']([^"' ,]{20,})/);
     if (srcset) candidates.push(srcset[1]);
-    for (const url of candidates) if (isRealImage(url, sourceId)) return url;
+    for (const url of candidates) {
+      if (isRealImage(url, sourceId)) return upgradeImageUrl(url, sourceId);
+    }
   } catch(e) {}
   return null;
+}
+
+// Upgrade image URL to higher resolution
+function upgradeImageUrl(url, sourceId) {
+  if (!url) return url;
+  try {
+    // ynet: change size params to larger
+    if (url.includes('ynet-pic') || url.includes('ynet.co.il')) {
+      url = url.replace(/\/picserver\d\/\d+\//, (m) => m.replace(/\/\d+\//, '/800/'));
+      url = url.replace(/_\d+\.jpg/, '_800.jpg');
+      url = url.replace(/crop_images\/\d+\/\d+\//, (m) => m.replace(/\/\d+\/\d+\//, '/800/450/'));
+    }
+    // haaretz: upgrade to larger
+    if (url.includes('haaretz.co.il') || url.includes('img.haaretz')) {
+      url = url.replace(/\?imageVersion=\d+x\d+/, '?imageVersion=1200x675');
+      url = url.replace(/height=\d+/, 'height=450').replace(/width=\d+/, 'width=800');
+    }
+    // walla: upgrade
+    if (url.includes('walla.co.il')) {
+      url = url.replace(/\/\d+x\d+\//, '/800x450/');
+    }
+    // google news thumbnails — small, skip
+    if (url.includes('news.google.com') && url.includes('=w')) {
+      url = url.replace(/=w\d+-h\d+/, '=w800-h450');
+    }
+  } catch(e) {}
+  return url;
 }
 
 function timeAgo(d) {
@@ -270,7 +302,15 @@ async function refreshNews() {
   }
 
   combined.sort((a, b) => b.ts - a.ts);
-  newsCache = combined.slice(0, 30); // max 30 items — memory budget
+  // Dedup by title similarity — remove near-duplicates across channels
+  const seenTitles = new Set();
+  combined = combined.filter(item => {
+    const key = item.title.replace(/[^א-תA-z]/g,'').slice(0,25).toLowerCase();
+    if (seenTitles.has(key)) return false;
+    seenTitles.add(key);
+    return true;
+  });
+  newsCache = combined.slice(0, 50); // 50 items
   cacheTime = Date.now();
   console.log(`${combined.length} items, ${ok}/${CHANNELS.length} channels`);
 }
