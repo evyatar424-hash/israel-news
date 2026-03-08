@@ -384,6 +384,8 @@ async function refreshNews() {
   console.log(`${combined.length} items, ${ok}/${CHANNELS.length} channels`);
   // Push new breaking items to subscribers
   checkAndPushNewItems(newsCache);
+  // Send breaking to Telegram
+  checkAndSendToTelegram(newsCache);
 }
 
 app.get('/api/news', async (req, res) => {
@@ -828,6 +830,80 @@ app.post('/api/push/daily-summary', async (req, res) => {
   await generateDailySummary();
   res.json({ ok: true, subscribers: pushSubscriptions.length });
 });
+
+
+// ══════════════════════════════════════════════
+// WHATSAPP BOT — Telegram fallback (WhatsApp needs business API)
+// שולח מבזקים ל-Telegram channel אוטומטית
+// ══════════════════════════════════════════════
+const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || '';
+const TELEGRAM_CHANNEL   = process.env.TELEGRAM_CHANNEL  || '@CumtaAlertsChannel';
+
+const sentToTelegram = new Set(); // prevent duplicates
+
+async function sendToTelegram(item) {
+  if (!TELEGRAM_BOT_TOKEN) return;
+  if (sentToTelegram.has(item.id)) return;
+  sentToTelegram.add(item.id);
+  if (sentToTelegram.size > 300) {
+    const arr = [...sentToTelegram];
+    arr.slice(0, 100).forEach(id => sentToTelegram.delete(id));
+  }
+
+  const src   = item.sourceName || 'חדשות IL';
+  const title = item.title || '';
+  const link  = item.link  || 'https://israel-news-wus7.onrender.com';
+
+  // Telegram message — RTL, markdown
+  const text = [
+    '📰 *' + title.replace(/[*_[]()~`>#+=|{}.!-]/g, '\\const PORT = process.env.PORT || 3000;') + '*',
+    '',
+    '🔗 ' + src,
+    link
+  ].join('\n');
+
+  try {
+    const res = await fetch(
+      'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          chat_id:    TELEGRAM_CHANNEL,
+          text,
+          parse_mode: 'Markdown',
+          disable_web_page_preview: false
+        }),
+        signal: AbortSignal.timeout(8000)
+      }
+    );
+    const data = await res.json();
+    if (!data.ok) console.log('[TG] Error:', data.description);
+    else console.log('[TG] Sent:', title.slice(0, 40));
+  } catch(e) {
+    console.log('[TG] Failed:', e.message);
+  }
+}
+
+// שלח מבזקים מ-2+ ערוצים ל-Telegram
+function checkAndSendToTelegram(items) {
+  if (!TELEGRAM_BOT_TOKEN || !items.length) return;
+  const now = Date.now();
+  const fresh = items.filter(i => !sentToTelegram.has(i.id) && (now - (i.ts||0)) < 8 * 60 * 1000);
+
+  // group by title similarity
+  const groups = {};
+  fresh.forEach(item => {
+    const key = (item.title||'').replace(/[^\u05D0-\u05EA]/g,'').slice(0,20);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(item);
+  });
+
+  // only breaking (2+ channels)
+  Object.values(groups).forEach(group => {
+    if (group.length >= 2) sendToTelegram(group[0]);
+  });
+}
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
