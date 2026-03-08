@@ -534,7 +534,8 @@ input[type=range]{width:100%;accent-color:var(--red)}
           <div style="font-size:13px;font-weight:800">🔔 התראות אזעקות</div>
           <div style="font-size:10px;color:var(--t3);margin-top:2px">קבל התראה מיידית על כל אזעקה</div>
         </div>
-        <button id="notifBtn" onclick="requestNotifications()" style="padding:8px 16px;border-radius:20px;border:none;font-family:var(--f);font-size:12px;font-weight:800;cursor:pointer;background:var(--red);color:#fff">
+        <button onclick="testPush()" style="margin-top:8px;padding:8px 16px;border-radius:20px;border:1px solid var(--b2);font-family:var(--f);font-size:11px;font-weight:700;cursor:pointer;background:transparent;color:var(--t2)">🔔 שלח פוש בדיקה</button>
+      <button id="notifBtn" onclick="requestNotifications()" style="padding:10px 20px;border-radius:20px;border:none;font-family:var(--f);font-size:13px;font-weight:800;cursor:pointer;background:linear-gradient(135deg,#e53e3e,#c8a96e);color:#fff;box-shadow:0 2px 12px rgba(229,62,62,.35);transition:all .2s">
           הפעל
         </button>
       </div>
@@ -1129,6 +1130,7 @@ window.addEventListener('appinstalled',()=>{
 // ── NOTIFICATIONS ──
 function updateNotifStatus(){
   const btn=document.getElementById('notifBtn');
+  if(!btn) return;
   const status=document.getElementById('notifStatus');
   if(!('Notification' in window)){
     if(status)status.textContent='התראות לא נתמכות בדפדפן זה';
@@ -1178,12 +1180,10 @@ async function subscribePush(){
       body: JSON.stringify(sub.toJSON())
     });
     console.log('Push subscription saved');
-    // Show confirmation notification
-    const n = new Notification('חדשות IL 🔔',{
-      body:'אזעקות ישלחו אליך ישירות, גם כשהאפליקציה סגורה!',
-      icon:'/icon-192.png', dir:'rtl'
-    });
-    setTimeout(()=>n.close(),4000);
+    // Send test push via server to verify end-to-end
+    try {
+      await fetch('/api/push/test', { method:'POST' });
+    } catch(e2) {}
   }catch(e){
     console.warn('Push subscribe failed:', e.message);
     // Fallback — still show browser notification
@@ -1192,6 +1192,15 @@ async function subscribePush(){
       icon:'/icon-192.png', dir:'rtl'
     });
   }
+}
+
+async function testPush(){
+  try{
+    const r = await fetch('/api/push/test',{method:'POST'});
+    const d = await r.json();
+    if(d.ok) alert('✅ פוש נשלח ל-'+d.subscribers+' מנויים!');
+    else alert('⚠️ '+d.msg);
+  }catch(e){ alert('שגיאה: '+e.message); }
 }
 
 function urlBase64ToUint8Array(base64String){
