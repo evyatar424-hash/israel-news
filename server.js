@@ -27,6 +27,8 @@ function saveSubs() {
 
 // Minimal VAPID push without web-push npm package
 // Uses Node crypto + fetch to send Web Push manually
+let _webpush=null;try{_webpush=require('web-push');_webpush.setVapidDetails(VAPID_SUBJECT,VAPID_PUBLIC_KEY,VAPID_PRIVATE_KEY);console.log('web-push ✓');}catch(e){console.error('web-push missing:',e.message);}
+
 async function sendWebPush(subscription, payload) {
   try {
     const { endpoint, keys } = subscription;
@@ -680,6 +682,15 @@ app.get('/api/alerts/oref-history', async (req, res) => {
 
 
 // ── PUSH SUBSCRIPTION ENDPOINTS ──
+app.get('/api/push/status', (req, res) => {
+  res.json({
+    webpush: !!_webpush,
+    vapidSet: !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
+    subscribers: pushSubscriptions.length,
+    publicKey: VAPID_PUBLIC_KEY?.slice(0,20) + '...'
+  });
+});
+
 app.post('/api/push/test', async (req, res) => {
   if (!pushSubscriptions.length) { res.json({ ok:false, msg:'אין מנויים' }); return; }
   await broadcastNewsPush({
