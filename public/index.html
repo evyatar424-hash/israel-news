@@ -310,6 +310,22 @@ input[type=range]{width:100%;accent-color:var(--red)}
 .ovl-areas{font-size:14px;font-weight:700;color:#ff9999;margin-top:12px;line-height:2}
 .ovl-warn{margin-top:14px;padding:10px;background:var(--red2);border:1px solid rgba(255,53,53,.3);border-radius:10px;font-size:12px;font-weight:700;color:#ff9999}
 .ovl-btn{margin-top:14px;width:100%;padding:14px;border-radius:12px;border:none;background:var(--red);color:#fff;font-size:14px;font-weight:900;cursor:pointer;font-family:var(--f)}
+
+.share-btn{display:flex;align-items:center;gap:4px;margin-top:8px;padding:7px 12px;border-radius:20px;border:1px solid rgba(37,211,102,.35);background:rgba(37,211,102,.08);color:#25D366;font-size:11px;font-weight:800;cursor:pointer;font-family:var(--f);transition:all .15s}
+.share-btn:active{transform:scale(.95);background:rgba(37,211,102,.18)}
+.share-btn svg{width:14px;height:14px;fill:#25D366;flex-shrink:0}
+
+/* Share overlay */
+#share-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:none;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)}
+#share-overlay.on{display:flex}
+#share-sheet{background:var(--surface);border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:480px}
+#share-sheet h3{text-align:center;font-size:15px;font-weight:800;color:var(--t);margin:0 0 16px}
+.share-options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.share-opt{display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 10px;border-radius:16px;border:1px solid var(--b);cursor:pointer;background:var(--card);transition:all .15s;text-decoration:none}
+.share-opt:active{transform:scale(.96)}
+.share-opt-ico{font-size:26px}
+.share-opt-lbl{font-size:11px;font-weight:700;color:var(--t2)}
+.share-cancel{width:100%;padding:13px;border-radius:14px;border:none;background:var(--card2);color:var(--t2);font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer}
 </style>
 </head>
 <body>
@@ -814,6 +830,13 @@ function buildList(){
     air.className='ai-result';
     a.querySelector('.nc-body').appendChild(aib);
     a.querySelector('.nc-body').appendChild(air);
+    // Share button
+    const sbtn = document.createElement('button');
+    sbtn.className = 'share-btn';
+    sbtn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"/></svg> שתף';
+    sbtn._item = item;
+    sbtn.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); openShare(this._item); });
+    a.querySelector('.nc-body').appendChild(sbtn);
     el.appendChild(a);seen.add(item.id);
   });
 }
@@ -1297,5 +1320,31 @@ showAlertPanel('unavail');
 connectStream();
 pollOnce();
 </script>
+
+<div id="share-overlay" onclick="closeShare(event)">
+  <div id="share-sheet">
+    <h3>שתף כתבה</h3>
+    <div class="share-options">
+      <a class="share-opt" id="share-wa" href="#" target="_blank">
+        <span class="share-opt-ico">💬</span>
+        <span class="share-opt-lbl">WhatsApp</span>
+      </a>
+      <a class="share-opt" id="share-tg" href="#" target="_blank">
+        <span class="share-opt-ico">✈️</span>
+        <span class="share-opt-lbl">Telegram</span>
+      </a>
+      <a class="share-opt" id="share-copy" href="#">
+        <span class="share-opt-ico">🔗</span>
+        <span class="share-opt-lbl">העתק קישור</span>
+      </a>
+      <a class="share-opt" id="share-native" href="#">
+        <span class="share-opt-ico">⬆️</span>
+        <span class="share-opt-lbl">שתף...</span>
+      </a>
+    </div>
+    <button class="share-cancel" onclick="closeShare()">ביטול</button>
+  </div>
+</div>
+
 </body>
 </html>
