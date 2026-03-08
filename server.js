@@ -92,14 +92,14 @@ const CHANNELS = [
   { id:'walla',     name:'וואלה',        color:'#FF6B00', icon:'🔥', url:'https://rss.walla.co.il/feed/22',                                             limit:3 },
   { id:'walla_w',   name:'וואלה ביטחון', color:'#cc5500', icon:'⚔️', url:'https://rss.walla.co.il/feed/2686',                                          limit:3 },
   { id:'walla_econ',name:'וואלה כלכלה',  color:'#15803d', icon:'💹', url:'https://rss.walla.co.il/feed/9',                                              limit:3 },
-  { id:'ch12',      name:'חדשות 12',     color:'#C8102E', icon:'📺', url:'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fnews.google.com%2Frss%2Fsearch%3Fq%3Dsite%3An12.co.il%26hl%3Dhe%26gl%3DIL%26ceid%3DIL%3Aiw',  limit:5 },
-  { id:'ch13',      name:'רשת 13',       color:'#7C3AED', icon:'📡', url:'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fnews.google.com%2Frss%2Fsearch%3Fq%3Dsite%3A13tv.co.il%26hl%3Dhe%26gl%3DIL%26ceid%3DIL%3Aiw', limit:5 },
-  { id:'ch14',      name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://www.now14.co.il/feed/',                                               limit:5 },
-  { id:'mako',      name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.mako.co.il%2Frss%2FNews-law-and-order.xml',                           limit:3 },
+  { id:'ch12',      name:'חדשות 12',     color:'#C8102E', icon:'📺', url:'https://news.google.com/rss/search?q=site:n12.co.il&hl=he&gl=IL&ceid=IL:iw',  limit:5 },
+  { id:'ch13',      name:'רשת 13',       color:'#7C3AED', icon:'📡', url:'https://news.google.com/rss/search?q=site:13tv.co.il&hl=he&gl=IL&ceid=IL:iw', limit:5 },
+  { id:'ch14',      name:'ערוץ 14',      color:'#d97706', icon:'🦅', url:'https://news.google.com/rss/search?q=site:now14.co.il&hl=he&gl=IL&ceid=IL:iw',                                               limit:5 },
+  { id:'mako',      name:'מאקו',         color:'#e11d48', icon:'🎬', url:'https://news.google.com/rss/search?q=site:mako.co.il+חדשות&hl=he&gl=IL&ceid=IL:iw',                           limit:3 },
   { id:'maariv',    name:'מעריב',        color:'#0891B2', icon:'🗞️', url:'https://www.maariv.co.il/Rss/RssFeedsMivzakiChadashot',                      limit:4 },
   { id:'haaretz',   name:'הארץ',         color:'#444',    icon:'📜', url:'https://www.haaretz.co.il/srv/rss---feedly',                                  limit:3 },
   { id:'idf',       name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://news.google.com/rss/search?q=%D7%93%D7%95%D7%91%D7%A8+%D7%A6%D7%91%D7%90+IDF&hl=he&gl=IL&ceid=IL:iw',                                                     limit:3 },
-  { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://api.rss2json.com/v1/api.json?rss_url=https%3A%2F%2Fwww.srugim.co.il%2Ffeed',                                               limit:3 },
+  { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://www.srugim.co.il/feed',                                               limit:3 },
 ];
 
 // No circuit breaker — simple timeout per channel handles failures
@@ -203,7 +203,7 @@ async function fetchWithProxy(url) {
   throw new Error('All proxies failed');
 }
 
-const PROXY_CHANNELS = new Set(['ch14']); // רק now14 צריך fallback לפעמים
+const PROXY_CHANNELS = new Set([]); // all channels use direct or Google News
 
 // Read GitHub Actions cache for blocked channels
 async function readGithubCache() {
@@ -222,28 +222,10 @@ async function readGithubCache() {
   return null;
 }
 
-// Fetch rss2json.com JSON API directly
-async function fetchRss2json(url) {
-  const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-  const data = await res.json();
-  if (data.status !== 'ok' || !data.items?.length) throw new Error('rss2json empty');
-  return {
-    items: data.items.map(i => ({
-      title: i.title, link: i.link, pubDate: i.pubDate,
-      contentSnippet: i.description?.replace(/<[^>]+>/g,'').slice(0,200),
-      'media:content': (i.thumbnail?.length > 10) ? { $: { url: i.thumbnail } } : undefined,
-      'media:thumbnail': (i.thumbnail?.length > 10) ? { $: { url: i.thumbnail } } : undefined,
-      content: i.content || '', guid: i.guid || i.link
-    }))
-  };
-}
-
 async function fetchChannel(ch) {
   try {
     let feed;
-    if (ch.url.includes('rss2json.com')) {
-      feed = await fetchRss2json(ch.url);
-    } else if (PROXY_CHANNELS.has(ch.id)) {
+    if (PROXY_CHANNELS.has(ch.id)) {
       feed = await fetchWithProxy(ch.url);
     } else {
       feed = await parser.parseURL(ch.url);
@@ -266,11 +248,7 @@ async function fetchChannel(ch) {
 }
 
 let newsCache = [], cacheTime = 0;
-let refreshing = false;
 async function refreshNews() {
-  if (refreshing) return; // prevent parallel runs
-  refreshing = true;
-  try {
 
   // Direct channels (not blocked)
   const directChannels = CHANNELS.filter(ch => !PROXY_CHANNELS.has(ch.id));
@@ -292,11 +270,9 @@ async function refreshNews() {
   }
 
   combined.sort((a, b) => b.ts - a.ts);
-  newsCache = combined.slice(0, 30);
+  newsCache = combined.slice(0, 30); // max 30 items — memory budget
   cacheTime = Date.now();
   console.log(`${combined.length} items, ${ok}/${CHANNELS.length} channels`);
-  } catch(e) { console.log('refreshNews error:', e.message); }
-  finally { refreshing = false; }
 }
 
 app.get('/api/news', async (req, res) => {
@@ -364,7 +340,7 @@ app.post('/api/ai/summarize', async (req, res) => {
       const text = data?.content?.[0]?.text?.trim();
       if (text) {
         cacheSet(cacheKey, text);
-        if(summaryCache.size>50) summaryCache.delete(summaryCache.keys().next().value);
+        if(summaryCache.size>500) summaryCache.delete(summaryCache.keys().next().value);
         res.json({ text });
         return;
       }
@@ -631,5 +607,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Port ${PORT}`);
   refreshNews();
-  setInterval(refreshNews, 120000);
+  setInterval(refreshNews, 10000);
 });
