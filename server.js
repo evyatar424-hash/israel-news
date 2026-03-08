@@ -81,7 +81,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 const parser = new Parser({
-  timeout: 6000,
+  timeout: 5000,
   customFields: { item: ['media:content','media:thumbnail','enclosure'] },
   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' }
 });
@@ -102,26 +102,7 @@ const CHANNELS = [
   { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://www.srugim.co.il/feed',                                               limit:3 },
 ];
 
-// Circuit breaker — skip channels that keep failing
-const channelFailures = {};
-const FAIL_COOLDOWN = 2 * 60 * 1000; // 2 min cooldown
-const FAIL_THRESHOLD = 5; // צריך 5 כישלונות לפני חסימה
-function shouldSkip(id) {
-  const f = channelFailures[id];
-  if (!f) return false;
-  if (f.count >= FAIL_THRESHOLD && Date.now() - f.lastFail < FAIL_COOLDOWN) {
-    console.log(`SKIP ${id} (circuit open, ${f.count} fails)`);
-    return true;
-  }
-  if (Date.now() - f.lastFail > FAIL_COOLDOWN) { delete channelFailures[id]; return false; }
-  return false;
-}
-function recordFail(id) {
-  if (!channelFailures[id]) channelFailures[id] = { count:0, lastFail:0 };
-  channelFailures[id].count++;
-  channelFailures[id].lastFail = Date.now();
-}
-function recordSuccess(id) { delete channelFailures[id]; }
+// No circuit breaker — simple timeout per channel handles failures
 
 // Block known logo/placeholder images
 const BAD_PATTERNS = [
@@ -242,13 +223,11 @@ async function readGithubCache() {
 }
 
 async function fetchChannel(ch) {
-  if (shouldSkip(ch.id)) return [];
   try {
     const feed = PROXY_CHANNELS.has(ch.id)
       ? await fetchWithProxy(ch.url)
       : await parser.parseURL(ch.url);
     if (!feed || !feed.items) return [];
-    recordSuccess(ch.id);
     return (feed.items || []).slice(0, ch.limit || 5).map((item, i) => ({
       id: ch.id + '_' + (item.guid || item.link || i),
       source: ch.id, sourceName: ch.name, sourceColor: ch.color, sourceIcon: ch.icon,
@@ -260,7 +239,6 @@ async function fetchChannel(ch) {
       ts: new Date(item.pubDate || item.isoDate).getTime() || (Date.now() - i * 60000)
     }));
   } catch(e) {
-    recordFail(ch.id);
     console.log(`ERR ${ch.name}: ${e.message.slice(0,60)}`);
     return [];
   }
@@ -268,11 +246,7 @@ async function fetchChannel(ch) {
 
 let newsCache = [], cacheTime = 0;
 async function refreshNews() {
-  // Reset very old failures on each refresh cycle
-  const now = Date.now();
-  Object.keys(channelFailures).forEach(id => {
-    if (now - channelFailures[id].lastFail > 10 * 60 * 1000) delete channelFailures[id];
-  });
+
   // Direct channels (not blocked)
   const directChannels = CHANNELS.filter(ch => !PROXY_CHANNELS.has(ch.id));
   const results = await Promise.allSettled(directChannels.map(ch => fetchChannel(ch)));
@@ -299,7 +273,7 @@ async function refreshNews() {
 }
 
 app.get('/api/news', async (req, res) => {
-  if (Date.now() - cacheTime > 30000) await refreshNews(); // 30s cache
+  if (Date.now() - cacheTime > 60000) await refreshNews(); // 60s cache — less load
   res.json({ items: newsCache, updated: new Date(cacheTime).toISOString(), total: newsCache.length });
 });
 
