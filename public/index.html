@@ -34,6 +34,7 @@ html,body{background:var(--bg)}
 body{font-family:var(--f);color:var(--t);max-width:430px;margin:0 auto;padding-bottom:66px;overflow-x:hidden;-webkit-font-smoothing:antialiased}
 ::-webkit-scrollbar{display:none}
 a{text-decoration:none;color:inherit}
+@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}@keyframes slideIn{from{opacity:0;transform:translateX(8px)}to{opacity:1;transform:translateX(0)}}
 @keyframes pulseR{0%,100%{box-shadow:0 0 0 0 rgba(255,53,53,.5)}70%{box-shadow:0 0 0 10px transparent}}
 @keyframes pulseG{0%,100%{box-shadow:0 0 0 0 rgba(0,204,136,.4)}70%{box-shadow:0 0 0 8px transparent}}
@@ -148,8 +149,10 @@ a{text-decoration:none;color:inherit}
 #stxt{font-size:10px;color:var(--t3)}
 #rfbtn{font-family:var(--f);font-size:10px;font-weight:700;color:var(--gold);background:var(--gold2);border:1px solid rgba(200,169,110,.3);border-radius:20px;padding:4px 12px;cursor:pointer}
 .chips{display:flex;gap:6px;padding:7px 10px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--b)}
-.chip{flex-shrink:0;padding:5px 11px;border-radius:20px;border:1px solid var(--b2);background:none;color:var(--t3);font-family:var(--f);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s;white-space:nowrap}
-.chip.on{border-color:rgba(229,62,62,.3);background:var(--red2);color:var(--red)}
+.chip{flex-shrink:0;width:44px;height:44px;border-radius:12px;border:2px solid var(--b2);background:var(--card);cursor:pointer;transition:all .18s;display:flex;align-items:center;justify-content:center;padding:0;overflow:hidden;position:relative}
+.chip.on{border-color:var(--chip-color,#e53e3e);box-shadow:0 0 0 3px color-mix(in srgb,var(--chip-color,#e53e3e) 25%,transparent);transform:scale(1.08)}
+.chip-all{font-size:13px;font-weight:900;color:var(--t2);font-family:var(--f)}
+.chip img{width:100%;height:100%;object-fit:contain;padding:6px}
 
 /* NEWS CARDS */
 #nlist{padding:8px 10px}
@@ -301,9 +304,10 @@ input[type=range]{width:100%;accent-color:var(--red)}
 .nb-badge.ok{background:var(--green);display:block}
 
 /* OVERLAY */
-#ovl{display:none;position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.88);backdrop-filter:blur(16px);align-items:center;justify-content:center}
-#ovl.on{display:flex}
-.ovl-box{background:var(--surface);border:1px solid rgba(255,53,53,.35);border-top:3px solid var(--red);border-radius:20px;padding:28px 20px;text-align:center;width:88%;max-width:340px;animation:fadeUp .3s cubic-bezier(.34,1.56,.64,1)}
+#ovl{display:none;position:fixed;top:0;left:0;right:0;z-index:9999;padding:12px;pointer-events:none}
+#ovl.on{display:block}
+.ovl-box{background:linear-gradient(135deg,#1a0a0a,#2d0e0e);border:2px solid var(--red);border-radius:20px;padding:16px 18px;text-align:center;animation:slideDown .35s cubic-bezier(.34,1.56,.64,1);pointer-events:all;box-shadow:0 8px 32px rgba(229,62,62,.4);position:relative}
+.ovl-dismiss{position:absolute;top:10px;left:12px;background:rgba(255,255,255,.1);border:none;color:#fff;font-size:16px;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-family:var(--f)}
 .ovl-ico{font-size:52px}
 .ovl-t{font-size:22px;font-weight:900;color:var(--red);margin-top:6px}
 .ovl-sub{font-size:13px;color:var(--t2);margin-top:4px}
@@ -332,12 +336,13 @@ input[type=range]{width:100%;accent-color:var(--red)}
 <!-- Overlay -->
 <div id="ovl">
   <div class="ovl-box">
+    <button class="ovl-dismiss" onclick="closeOvl()" title="סגור">✕</button>
     <div class="ovl-ico">🚨</div>
     <div class="ovl-t">אזעקה!</div>
     <div class="ovl-sub" id="ovl-type"></div>
     <div class="ovl-areas" id="ovl-areas"></div>
     <div class="ovl-warn">⚠️ היכנסו למרחב מוגן מיידית</div>
-    <button class="ovl-btn" onclick="closeOvl()">הבנתי</button>
+    <button class="ovl-btn" onclick="closeOvl()">הבנתי — סגור</button>
   </div>
 </div>
 
@@ -556,6 +561,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
         </button>
       </div>
       <div id="notifStatus" style="font-size:10px;color:var(--t3)">סטטוס: לא מופעל</div>
+<button id="notifOffBtn" onclick="disableNotifications()" style="display:none;margin-top:8px;padding:7px 14px;border-radius:20px;border:1px solid var(--b2);background:transparent;color:var(--t3);font-family:var(--f);font-size:11px;font-weight:700;cursor:pointer">🔕 בטל התראות</button>
     </div>
     <div class="s-lbl">התראות</div>
     <button class="s-btn sb-red" onclick="reqNotif()">🔔 הפעל התראות דפדפן</button>
@@ -576,7 +582,16 @@ input[type=range]{width:100%;accent-color:var(--red)}
     </div>
     <div class="s-lbl">עדכונים</div>
     <div class="s-card">
-      <div class="s-row"><div><div class="s-main">רענון אוטומטי</div><div class="s-sub">כל 10 שניות</div></div><div class="tgl on" id="tg-auto" onclick="tog('auto')"></div></div>
+      <div class="s-row"><div><div class="s-main">רענון אוטומטי</div><div class="s-sub" id="interval-lbl">כל 30 שניות</div></div>
+<select id="interval-sel" onchange="setRefreshInterval(+this.value)" style="background:var(--card2);border:1px solid var(--b2);color:var(--t);border-radius:10px;padding:5px 8px;font-family:var(--f);font-size:11px;cursor:pointer">
+  <option value="0">כבוי</option>
+  <option value="10000">10 שניות</option>
+  <option value="20000">20 שניות</option>
+  <option value="30000" selected>30 שניות</option>
+  <option value="60000">דקה</option>
+  <option value="120000">2 דקות</option>
+  <option value="180000">3 דקות</option>
+</select></div>
     </div>
     <div class="s-footer">חדשות IL v6.1<br>ynet · וואלה · כאן 11 · ערוץ 12 · ערוץ 13 · ערוץ 14<br>מאקו · מעריב · הארץ · ערוץ 7 · דובר צבא</div>
   </div>
@@ -718,11 +733,24 @@ function goodImg(url,src){
 }
 
 // Hero card
+
+function upgradeImgUrl(url){
+  if(!url||url.length<10)return url;
+  // ynet — largest crop
+  url=url.replace(/crop_images\/\d+\/\d+\//,'crop_images/1200/675/');
+  url=url.replace(/_\d+\.jpg/,'_1200.jpg');
+  // haaretz
+  url=url.replace(/\?imageVersion=\d+x\d+/,'?imageVersion=1200x675');
+  url=url.replace(/height=\d+/,'height=675').replace(/width=\d+/,'width=1200');
+  // walla
+  url=url.replace(/\/\d+x\d+\//,'/1200x675/');
+  return url;
+}
 function buildHero(item){
   const el=document.getElementById('hero');
   if(!item){el.innerHTML='';return;}
   const ch=CH[item.source]||{n:item.source,c:'#E8001E',i:'📰'};
-  const hi=goodImg(item.image,item.source);
+  item.image=upgradeImgUrl(item.image);const hi=goodImg(item.image,item.source);
   if(hi){
     el.innerHTML='<div style="padding:10px 10px 0"><a class="hc" href="'+item.link+'" target="_blank" rel="noopener"><div class="hc-rel"><img class="hc-img" src="'+item.image+'" alt="" onerror="this.style.display=\"none\""><div class="hc-grad"></div><div class="hc-body"><div class="hc-meta"><span class="hc-src" style="color:'+ch.c+'">'+ch.i+' '+ch.n+'</span><span class="hc-tag">מבזק</span></div><div class="hc-title">'+item.title+'</div><div class="hc-foot"><span class="hc-time">'+item.timeAgo+'</span><span class="hc-cta">קרא עוד ›</span></div></div></div></a></div>';
   }else{
@@ -735,17 +763,22 @@ function buildHero(item){
 function buildChips(){
   const el=document.getElementById('chips');el.innerHTML='';
   ['all',...new Set(items.map(x=>x.source))].forEach(id=>{
-    const ch=id==='all'?{n:'הכל',c:'#c9a84c'}:(CH[id]||{n:id,c:'#888'});
+    const ch=id==='all'?{n:'הכל',c:'#c9a84c',logo:null}:(CH[id]||{n:id,c:'#888',logo:null});
     const b=document.createElement('button');
     b.className='chip'+(id===cur?' on':'');
+    b.title=ch.n;
+    b.style.setProperty('--chip-color', ch.c);
     if(id==='all'){
-      b.textContent='✦ הכל';
+      b.innerHTML='<span class="chip-all">✦</span>';
     } else if(ch.logo){
-      b.innerHTML='<img style="width:14px;height:14px;border-radius:4px;object-fit:contain;background:#fff;padding:1px;vertical-align:middle;margin-left:4px" src="'+ch.logo+'" onerror="this.remove()"> '+ch.n;
+      const img=document.createElement('img');
+      img.src=ch.logo;
+      img.alt=ch.n;
+      img.onerror=function(){this.parentElement.innerHTML='<span class="chip-all" style="font-size:9px;color:'+ch.c+'">'+ch.n.slice(0,3)+'</span>';};
+      b.appendChild(img);
     } else {
-      b.textContent=ch.n;
+      b.innerHTML='<span class="chip-all" style="font-size:9px;color:'+ch.c+'">'+ch.n.slice(0,3)+'</span>';
     }
-    if(id===cur)b.style.cssText='background:'+ch.c+'18;border-color:'+ch.c+'44;color:'+ch.c;
     b.onclick=()=>{cur=id;buildChips();buildList();};
     el.appendChild(b);
   });
@@ -843,7 +876,7 @@ function buildList(){
 
 let _lastNewsIds = new Set();
 function sendBreakingNotif(title, source){
-  if(Notification.permission!=='granted')return;
+  if(!('Notification'in window)||Notification.permission!=='granted')return;
   if(localStorage.getItem('notif')!=='granted')return;
   new Notification('🔴 ' + (source||'מבזק'), {
     body: title, icon:'/icon-192.png', badge:'/icon-192.png',
@@ -890,7 +923,21 @@ async function loadNews(manual=false){
   if(manual){btn.disabled=false;btn.innerHTML='⟳ רענן';}
   busy=false;
 }
-function startAuto(){stopAuto();if(gs('auto'))autoT=setInterval(()=>loadNews(),20000);}
+function startAuto(){setRefreshInterval(30000);}
+function setRefreshInterval(ms){
+  stopAuto();
+  const lbl=document.getElementById('interval-lbl');
+  const sel=document.getElementById('interval-sel');
+  if(!ms){if(lbl)lbl.textContent='כבוי';return;}
+  if(sel)sel.value=ms;
+  const labels={10000:'כל 10 שניות',20000:'כל 20 שניות',30000:'כל 30 שניות',60000:'כל דקה',120000:'כל 2 דקות',180000:'כל 3 דקות'};
+  if(lbl)lbl.textContent=labels[ms]||'רענון אוטומטי';
+  autoT=setInterval(()=>loadNews(),ms);
+  ss('refreshInterval',ms);
+}
+// Restore saved interval
+const _savedInterval=parseInt(gs('refreshInterval')||30000);
+if(_savedInterval>0)setRefreshInterval(_savedInterval);
 function stopAuto(){if(autoT){clearInterval(autoT);autoT=null;}}
 startAuto();
 
@@ -912,6 +959,7 @@ function playAlarm(){
 function testAudio(){playAlarm();if(gs('vib')&&navigator.vibrate)navigator.vibrate([200,100,200]);}
 async function reqNotif(){
   if(!('Notification'in window)){alert('הדפדפן לא תומך');return;}
+  if(!('Notification'in window)){alert('הדפדפן לא תומך בהתראות');return;}
   const p=await Notification.requestPermission();
   alert(p==='granted'?'✅ התראות הופעלו!':'⚠️ אנא אשר הרשאה');
 }
@@ -1112,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-if('serviceWorker'in navigator)navigator.serviceWorker.register('/sw.js');
+if('serviceWorker'in navigator&&!location.hostname.includes('claude'))navigator.serviceWorker.register('/sw.js');
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt',(e)=>{
   e.preventDefault(); deferredPrompt=e;
@@ -1153,7 +1201,13 @@ window.addEventListener('appinstalled',()=>{
 // ── NOTIFICATIONS ──
 function updateNotifStatus(){
   const btn=document.getElementById('notifBtn');
+  const offBtn=document.getElementById('notifOffBtn');
   if(!btn) return;
+  if('Notification'in window&&Notification.permission==='granted'){
+    if(offBtn)offBtn.style.display='inline-block';
+  } else {
+    if(offBtn)offBtn.style.display='none';
+  }
   const status=document.getElementById('notifStatus');
   if(!('Notification' in window)){
     if(status)status.textContent='התראות לא נתמכות בדפדפן זה';
@@ -1169,8 +1223,29 @@ function updateNotifStatus(){
   }
 }
 
+
+async function disableNotifications(){
+  try{
+    if('serviceWorker' in navigator){
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if(sub){
+        await sub.unsubscribe();
+        await fetch('/api/push/unsubscribe',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({endpoint:sub.endpoint})
+        });
+      }
+    }
+    ss('notif','');
+    updateNotifStatus();
+    alert('🔕 התראות בוטלו בהצלחה');
+  }catch(e){ alert('שגיאה: '+e.message); }
+}
 async function requestNotifications(){
   if(!('Notification' in window))return;
+  if(!('Notification'in window)){updateNotifStatus();return;}
   const perm = await Notification.requestPermission();
   if(perm==='granted'){
     await subscribePush();
@@ -1235,7 +1310,7 @@ function urlBase64ToUint8Array(base64String){
 
 // Send notification when alert arrives
 function sendAlertNotif(cities, type){
-  if(Notification.permission!=='granted')return;
+  if(!('Notification'in window)||Notification.permission!=='granted')return;
   const body = Array.isArray(cities) ? cities.slice(0,4).join('، ') : cities;
   new Notification('🚨 ' + (type||'ירי רקטות'),{
     body: body,
