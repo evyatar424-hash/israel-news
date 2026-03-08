@@ -293,18 +293,32 @@ async function refreshNews() {
   }
 
   combined.sort((a, b) => b.ts - a.ts);
-  newsCache = combined; cacheTime = Date.now();
+  newsCache = combined.slice(0, 30); // max 30 items — memory budget
+  cacheTime = Date.now();
   console.log(`${combined.length} items, ${ok}/${CHANNELS.length} channels`);
 }
 
 app.get('/api/news', async (req, res) => {
-  if (Date.now() - cacheTime > 10000) await refreshNews();
+  if (Date.now() - cacheTime > 30000) await refreshNews(); // 30s cache
   res.json({ items: newsCache, updated: new Date(cacheTime).toISOString(), total: newsCache.length });
 });
 
 // ── AI PROXY — Claude Haiku ──
-// Summary cache — avoid duplicate API calls
+// Summary cache — max 80 entries, LRU-lite
 const summaryCache = new Map();
+function cacheSet(k, v) {
+  if (summaryCache.size >= 50) {
+    // delete oldest entry
+    summaryCache.delete(summaryCache.keys().next().value);
+  }
+  summaryCache.set(k, v);
+}
+// Periodic memory cleanup every 30 min
+setInterval(() => {
+  summaryCache.clear();
+  if (global.gc) global.gc(); // trigger GC if --expose-gc
+  console.log('Memory cleanup: summary cache cleared');
+}, 15 * 60 * 1000);
 
 app.post('/api/ai/summarize', async (req, res) => {
   const { title, desc } = req.body || {};
@@ -348,7 +362,7 @@ app.post('/api/ai/summarize', async (req, res) => {
       }
       const text = data?.content?.[0]?.text?.trim();
       if (text) {
-        summaryCache.set(cacheKey, text);
+        cacheSet(cacheKey, text);
         if(summaryCache.size>500) summaryCache.delete(summaryCache.keys().next().value);
         res.json({ text });
         return;
@@ -368,6 +382,7 @@ let tzofarWs = null;
 let tzofarConnected = false;
 let orefConnected = false;
 const sseClients = new Set();
+const MAX_SSE_CLIENTS = 20; // low memory budget on free tier
 
 function broadcastSSE(payload) {
   const data = `data: ${JSON.stringify(payload)}\n\n`;
@@ -428,7 +443,7 @@ async function pollOref() {
       ts: Date.now()
     };
     alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
-    if (alertHistory.length > 50) alertHistory.length = 50;
+    if (alertHistory.length > 20) alertHistory.length = 20;
     console.log('🚨 Oref alert:', currentAlert.title, currentAlert.data.slice(0, 3));
     broadcastSSE({ alert: currentAlert, connected: true });
     broadcastPush(currentAlert);
@@ -453,7 +468,9 @@ async function pollOref() {
 }
 
 pollOref();
-setInterval(pollOref, 5000);
+setInterval(pollOref, 15000); // 15s polling — lower memory pressure
+
+// Tzofar WebSocket DISABLED — consumes memory on free tier, oref polling is sufficient
 
 // ── SOURCE 2: Tzofar WebSocket (secondary — may be blocked from US IP) ──
 function connectTzofar() {
@@ -475,7 +492,7 @@ function connectTzofar() {
           if (!currentAlert || currentAlert.id !== newAlert.id) {
             currentAlert = newAlert;
             alertHistory.unshift({ ...currentAlert, alertDate: new Date().toISOString() });
-            if (alertHistory.length > 50) alertHistory.length = 50;
+            if (alertHistory.length > 20) alertHistory.length = 20;
             console.log('🚨 Tzofar alert:', currentAlert.title);
             broadcastSSE({ alert: currentAlert, connected: true });
             broadcastPush(currentAlert);
@@ -505,7 +522,7 @@ function connectTzofar() {
     setTimeout(connectTzofar, 30000);
   }
 }
-connectTzofar();
+// connectTzofar(); — disabled to save memory on free tier
 
 // SSE stream for browser
 app.get('/api/alerts/stream', (req, res) => {
@@ -514,6 +531,12 @@ app.get('/api/alerts/stream', (req, res) => {
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
   res.write(`data: ${JSON.stringify({ alert: currentAlert, connected: tzofarConnected })}\n\n`);
+  if (sseClients.size >= MAX_SSE_CLIENTS) {
+    // kick oldest client
+    const oldest = sseClients.values().next().value;
+    oldest.end();
+    sseClients.delete(oldest);
+  }
   sseClients.add(res);
   // Heartbeat every 25s to keep connection alive through proxies
   const hb = setInterval(() => { try { res.write(': heartbeat\n\n'); } catch(e) { clearInterval(hb); } }, 25000);
@@ -591,6 +614,17 @@ app.post('/api/push/unsubscribe', (req, res) => {
 });
 
 app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected, oref: orefConnected }));
+
+// Memory watchdog — log every 5 min, emergency cleanup if > 420MB
+setInterval(() => {
+  const mb = Math.round(process.memoryUsage().rss / 1024 / 1024);
+  console.log(`MEM: ${mb}MB`);
+  if (mb > 420) {
+    console.log('⚠️ MEM HIGH: clearing caches');
+    summaryCache.clear();
+    newsCache = newsCache.slice(0, 10);
+  }
+}, 5 * 60 * 1000);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
