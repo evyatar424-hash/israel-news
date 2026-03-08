@@ -726,6 +726,109 @@ setInterval(() => {
   }
 }, 5 * 60 * 1000);
 
+
+
+// ══ DAILY EVENING SUMMARY — 20:00 Israel time ══
+let lastDailySummaryDate = '';
+
+async function generateDailySummary() {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || !pushSubscriptions.length || !newsCache.length) return;
+
+  const cutoff = Date.now() - 8 * 60 * 60 * 1000;
+  const todayItems = newsCache.filter(i => i.ts > cutoff);
+  if (todayItems.length < 3) return;
+
+  const seen = new Set();
+  const top5 = [];
+  for (const item of todayItems) {
+    if (top5.length >= 5) break;
+    const key = (item.title || '').replace(/[^\u05D0-\u05EA]/g,'').slice(0,15);
+    if (!seen.has(key)) { seen.add(key); top5.push(item); }
+  }
+
+  const headlines = top5.map((item, n) => (n+1) + '. ' + item.title).join('\n');
+
+  const prompt = `אתה עורך של תוכנית חדשות ישראלית.
+כתוב סיכום ערב קצר ומרתק בעברית — 3 משפטים בלבד.
+משפט ראשון: הכותרת החשובה ביותר של היום.
+משפט שני: עוד 2-3 נושאים מרכזיים.
+משפט שלישי: תחזית קצרה.
+ללא כותרות, ללא bullets — טקסט רציף, חד ומקצועי.
+
+כותרות היום:
+${headlines}`;
+
+  const MODELS = ['claude-haiku-4-5-20251001', 'claude-haiku-3-5-20241022'];
+  let summary = '';
+
+  for (const model of MODELS) {
+    try {
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({ model, max_tokens: 250, messages: [{ role: 'user', content: prompt }] }),
+        signal: AbortSignal.timeout(15000)
+      });
+      const data = await res.json();
+      if (data?.error) { console.log('Daily AI err:', data.error.type); continue; }
+      summary = data?.content?.[0]?.text?.trim() || '';
+      if (summary) break;
+    } catch(e) { console.log('Daily summary err:', e.message); }
+  }
+
+  if (!summary) {
+    summary = top5.slice(0,3).map(i => i.title).join(' | ');
+  }
+
+  const payload = {
+    title: '\u{1F4CB} \u05E1\u05D9\u05DB\u05D5\u05DD \u05D9\u05D5\u05DD \u2014 \u05D7\u05D3\u05E9\u05D5\u05EA IL',
+    body: summary.slice(0, 150),
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: '/' },
+    vibrate: [200, 100, 200],
+    dir: 'rtl',
+    lang: 'he',
+    tag: 'daily-summary',
+    renotify: true
+  };
+
+  console.log('[DAILY] Sending to', pushSubscriptions.length, 'subscribers');
+  const results = await Promise.allSettled(pushSubscriptions.map(s => sendWebPush(s, payload)));
+  const ok = results.filter(r => r.status === 'fulfilled' && r.value).length;
+  console.log('[DAILY] Sent', ok + '/' + pushSubscriptions.length);
+}
+
+// Check every minute if it's 20:00 IL
+setInterval(() => {
+  const now = new Date();
+  const ilTime = new Intl.DateTimeFormat('en-IL', {
+    timeZone: 'Asia/Jerusalem', hour: 'numeric', minute: 'numeric', hour12: false
+  }).format(now);
+  const [ilHour, ilMin] = ilTime.split(':').map(Number);
+  const todayStr = now.toISOString().slice(0, 10);
+  if (ilHour === 20 && ilMin < 2 && lastDailySummaryDate !== todayStr) {
+    lastDailySummaryDate = todayStr;
+    console.log('[DAILY] Triggering 20:00 summary...');
+    generateDailySummary().catch(e => console.log('[DAILY] Failed:', e.message));
+  }
+}, 60 * 1000);
+
+// Manual trigger for testing
+app.post('/api/push/daily-summary', async (req, res) => {
+  const secret = req.headers['x-secret'] || (req.body && req.body.secret);
+  if (secret !== (process.env.ADMIN_SECRET || 'hdshot-admin')) {
+    return res.status(403).json({ ok: false, msg: 'Unauthorized' });
+  }
+  await generateDailySummary();
+  res.json({ ok: true, subscribers: pushSubscriptions.length });
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Port ${PORT}`);
