@@ -451,7 +451,7 @@ input[type=range]{width:100%;accent-color:var(--red)}
       <div class="lc-live-dot"></div>
     </a>
   </div>
-  <div id="nlist"><div class="empty"><div class="empty-ico">📡</div><div class="empty-txt">טוען חדשות...</div></div></div>
+  <div id="nlist"><div class="empty"><div class="empty-ico" style="animation:blink 1s infinite;display:inline-block">📡</div><div class="empty-txt">טוען חדשות...<br><span style="font-size:9px;opacity:.5">מתחבר לערוצים</span></div></div></div>
 </div>
 
 <!-- ALERTS -->
@@ -705,7 +705,7 @@ function buildHero(item){
   const ch=CH[item.source]||{n:item.source,c:'#E8001E',i:'📰'};
   const hi=goodImg(item.image,item.source);
   if(hi){
-    el.innerHTML='<div style="padding:10px 10px 0"><a class="hc" href="'+item.link+'" target="_blank" rel="noopener"><div class="hc-rel"><img class="hc-img" src="'+item.image+'" alt="" onerror="this.style.display=\'none\'"><div class="hc-grad"></div><div class="hc-body"><div class="hc-meta"><span class="hc-src" style="color:'+ch.c+'">'+ch.i+' '+ch.n+'</span><span class="hc-tag">מבזק</span></div><div class="hc-title">'+item.title+'</div><div class="hc-foot"><span class="hc-time">'+item.timeAgo+'</span><span class="hc-cta">קרא עוד ›</span></div></div></div></a></div>';
+    el.innerHTML='<div style="padding:10px 10px 0"><a class="hc" href="'+item.link+'" target="_blank" rel="noopener"><div class="hc-rel"><img class="hc-img" src="'+item.image+'" alt="" onerror="this.style.display=\"none\""><div class="hc-grad"></div><div class="hc-body"><div class="hc-meta"><span class="hc-src" style="color:'+ch.c+'">'+ch.i+' '+ch.n+'</span><span class="hc-tag">מבזק</span></div><div class="hc-title">'+item.title+'</div><div class="hc-foot"><span class="hc-time">'+item.timeAgo+'</span><span class="hc-cta">קרא עוד ›</span></div></div></div></a></div>';
   }else{
     const hLogoHtml = ch.logo ? '<img style="width:16px;height:16px;border-radius:5px;object-fit:contain;background:#fff;padding:1px;margin-left:5px;vertical-align:middle" src="'+ch.logo+'" onerror="this.remove()">' : '';
     el.innerHTML='<div style="padding:10px 10px 0"><a class="hc" href="'+item.link+'" target="_blank" rel="noopener"><div class="hc-txt"><div class="hc-meta"><span class="hc-src" style="color:'+ch.c+'">'+hLogoHtml+ch.n+'</span><span class="hc-tag">מבזק</span></div><div class="hc-title">'+item.title+'</div>'+(item.desc?'<div class="hc-desc">'+item.desc+'</div>':'')+'<div class="hc-foot"><span class="hc-time">'+item.timeAgo+'</span><span class="hc-cta" style="color:var(--gold)">קרא עוד ›</span></div></div></a></div>';
@@ -722,7 +722,7 @@ function buildChips(){
     if(id==='all'){
       b.textContent='✦ הכל';
     } else if(ch.logo){
-      b.innerHTML='<img style="width:14px;height:14px;border-radius:4px;object-fit:contain;background:#fff;padding:1px;vertical-align:middle;margin-left:4px" src="'+ch.logo+'" onerror="this.style.display='none'"> '+ch.n;
+      b.innerHTML='<img style="width:14px;height:14px;border-radius:4px;object-fit:contain;background:#fff;padding:1px;vertical-align:middle;margin-left:4px" src="'+ch.logo+'" onerror="this.remove()"> '+ch.n;
     } else {
       b.textContent=ch.n;
     }
@@ -745,7 +745,7 @@ async function aiSum(btn){
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body:JSON.stringify({title,desc}),
-      signal:AbortSignal.timeout(12000)
+      
     });
     const d=await r.json();
     if(d.text && d.text !== '—' && !d.text.includes('חסר') && !d.text.includes('שגיאה') && d.text.length > 5){
@@ -829,20 +829,38 @@ async function loadNews(manual=false){
   const btn=document.getElementById('rfbtn'),stxt=document.getElementById('stxt');
   if(manual){btn.disabled=true;btn.innerHTML='<span class="spinner">⟳</span>';}
   try{
-    const r=await fetch('/api/news?t='+Date.now(),{signal:AbortSignal.timeout(15000)});
-    const d=await r.json();
+    const r=await fetch('/api/news?t='+Date.now());
+    const txt=await r.text();
+    if(txt.trimStart().startsWith('<')){
+      // SW ישן מחזיר HTML — אלץ עדכון
+      stxt.textContent='🔄 מעדכן...';
+      if('serviceWorker' in navigator){
+        const reg=await navigator.serviceWorker.getRegistration();
+        if(reg){await reg.update();await reg.unregister();}
+      }
+      setTimeout(()=>location.reload(true),1000);
+      return;
+    }
+    const d=JSON.parse(txt);
     if(d.items&&d.items.length){
       items=d.items;
       const t=new Date(d.updated).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
       stxt.textContent='✓ '+t+' · '+d.total+' כתבות';
+      // clear loading state
+      const nl=document.getElementById('nlist');
+      if(nl&&nl.querySelector('.empty-ico')?.textContent==='📡') nl.innerHTML='';
       if(cur==='all'){
-        // Always pick item WITH image for hero — fallback to first
         const heroItem = items.find(x => x.image && x.image.length > 10) || items[0];
         buildHero(heroItem);
       }
       buildChips();buildList();rotateTicker();
+    } else {
+      stxt.textContent='⟳ מחכה לערוצים...';
     }
-  }catch(e){console.error('loadNews error:',e);stxt.textContent='⚠️ '+e.message.slice(0,40);busy=false;}
+  }catch(e){
+    console.error('loadNews error:',e);
+    stxt.textContent='⚠️ שגיאת חיבור';
+  }
   if(manual){btn.disabled=false;btn.innerHTML='⟳ רענן';}
   busy=false;
 }
@@ -999,7 +1017,7 @@ function connectStream(){
 }
 
 function pollOnce(){
-  fetch('/api/alerts',{signal:AbortSignal.timeout(5000)})
+  fetch('/api/alerts')
     .then(r=>r.json())
     .then(d=>{
       setConn(d.connected?'ok':'err');
