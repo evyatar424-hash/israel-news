@@ -266,7 +266,11 @@ async function fetchChannel(ch) {
 }
 
 let newsCache = [], cacheTime = 0;
+let refreshing = false;
 async function refreshNews() {
+  if (refreshing) return; // prevent parallel runs
+  refreshing = true;
+  try {
 
   // Direct channels (not blocked)
   const directChannels = CHANNELS.filter(ch => !PROXY_CHANNELS.has(ch.id));
@@ -288,9 +292,11 @@ async function refreshNews() {
   }
 
   combined.sort((a, b) => b.ts - a.ts);
-  newsCache = combined.slice(0, 30); // max 30 items — memory budget
+  newsCache = combined.slice(0, 30);
   cacheTime = Date.now();
   console.log(`${combined.length} items, ${ok}/${CHANNELS.length} channels`);
+  } catch(e) { console.log('refreshNews error:', e.message); }
+  finally { refreshing = false; }
 }
 
 app.get('/api/news', async (req, res) => {
@@ -358,7 +364,7 @@ app.post('/api/ai/summarize', async (req, res) => {
       const text = data?.content?.[0]?.text?.trim();
       if (text) {
         cacheSet(cacheKey, text);
-        if(summaryCache.size>500) summaryCache.delete(summaryCache.keys().next().value);
+        if(summaryCache.size>50) summaryCache.delete(summaryCache.keys().next().value);
         res.json({ text });
         return;
       }
@@ -625,5 +631,5 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Port ${PORT}`);
   refreshNews();
-  setInterval(refreshNews, 10000);
+  setInterval(refreshNews, 120000);
 });
