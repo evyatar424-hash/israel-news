@@ -53,6 +53,75 @@ async function sendWebPush(subscription, payload) {
   }
 }
 
+// ── PUSH: Breaking News ──
+const seenNewsIds = new Set(); // track sent news to avoid duplicates
+
+async function broadcastNewsPush(item) {
+  if (!pushSubscriptions.length) return;
+  const payload = {
+    title: '📰 ' + (item.sourceName || 'חדשות IL'),
+    body: item.title || '',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    image: item.image || undefined,
+    data: { url: item.link || '/' },
+    vibrate: [200, 50, 200],
+    dir: 'rtl',
+    lang: 'he',
+    tag: 'news-' + item.id,
+    renotify: false
+  };
+  const results = await Promise.allSettled(pushSubscriptions.map(s => sendWebPush(s, payload)));
+  const ok = results.filter(r => r.status==='fulfilled' && r.value).length;
+  console.log(`[NEWS PUSH] "${item.title?.slice(0,40)}" → ${ok}/${pushSubscriptions.length}`);
+}
+
+// Check new items after each refresh and push breaking ones
+let lastPushCheck = Date.now();
+function checkAndPushNewItems(newItems) {
+  if (!pushSubscriptions.length) return;
+  const now = Date.now();
+  // Only push items from the last 10 minutes that we haven't pushed before
+  const fresh = newItems.filter(item => {
+    if (seenNewsIds.has(item.id)) return false;
+    const age = now - (item.ts || 0);
+    return age < 10 * 60 * 1000; // < 10 minutes old
+  });
+  // Count how many channels cover the same headline (breaking = 2+ channels)
+  const titleMap = {};
+  fresh.forEach(item => {
+    const key = item.title.replace(/[^א-ת]/g,'').slice(0,20);
+    if (!titleMap[key]) titleMap[key] = [];
+    titleMap[key].push(item);
+  });
+  // Push breaking (multi-channel) first, then top 1 new item
+  let pushed = 0;
+  const maxPush = 3;
+  Object.values(titleMap).forEach(group => {
+    if (pushed >= maxPush) return;
+    if (group.length >= 2) { // breaking — covered by 2+ channels
+      const item = group[0];
+      seenNewsIds.add(item.id);
+      group.forEach(i => seenNewsIds.add(i.id));
+      broadcastNewsPush({ ...item, sourceName: '🔥 מבזק — ' + item.sourceName });
+      pushed++;
+    }
+  });
+  // Push up to 1 fresh non-breaking item if no breaking
+  if (pushed === 0) {
+    const single = fresh.find(item => !seenNewsIds.has(item.id));
+    if (single) {
+      seenNewsIds.add(single.id);
+      broadcastNewsPush(single);
+    }
+  }
+  // Keep seenNewsIds bounded
+  if (seenNewsIds.size > 500) {
+    const arr = [...seenNewsIds];
+    arr.slice(0, 200).forEach(id => seenNewsIds.delete(id));
+  }
+}
+
 async function broadcastPush(alert) {
   if (!pushSubscriptions.length) return;
   const cities = alert.data || [];
@@ -313,6 +382,8 @@ async function refreshNews() {
   newsCache = combined.slice(0, 50); // 50 items
   cacheTime = Date.now();
   console.log(`${combined.length} items, ${ok}/${CHANNELS.length} channels`);
+  // Push new breaking items to subscribers
+  checkAndPushNewItems(newsCache);
 }
 
 app.get('/api/news', async (req, res) => {
@@ -607,6 +678,18 @@ app.get('/api/alerts/oref-history', async (req, res) => {
 
 
 // ── PUSH SUBSCRIPTION ENDPOINTS ──
+app.post('/api/push/test', async (req, res) => {
+  if (!pushSubscriptions.length) { res.json({ ok:false, msg:'אין מנויים' }); return; }
+  await broadcastNewsPush({
+    id: 'test-' + Date.now(),
+    title: 'בדיקת פוש — חדשות IL עובד! 🎉',
+    sourceName: 'חדשות IL',
+    link: '/',
+    image: '/icon-192.png'
+  });
+  res.json({ ok: true, subscribers: pushSubscriptions.length });
+});
+
 app.get('/api/push/vapid-key', (req, res) => {
   res.json({ publicKey: VAPID_PUBLIC_KEY });
 });
