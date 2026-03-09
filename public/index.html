@@ -123,18 +123,23 @@ a{text-decoration:none;color:inherit}
 
 /* LIVE STRIP */
 .live-row{display:flex;gap:8px;padding:10px 12px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid var(--b)}
+/* ── Live Channel Cards — redesigned ── */
+.live-row{display:flex;gap:10px;padding:14px 14px 10px;overflow-x:auto;scrollbar-width:none}
+.live-row::-webkit-scrollbar{display:none}
+.lc-wrap{display:flex;flex-direction:column;align-items:center;gap:5px;flex-shrink:0;cursor:pointer;text-decoration:none}
 .lc-card{
-  flex-shrink:0;width:62px;height:62px;border-radius:16px;
-  border:1px solid var(--b2);
+  width:64px;height:64px;border-radius:18px;
+  border:2px solid transparent;
   display:flex;align-items:center;justify-content:center;
-  cursor:pointer;text-decoration:none;position:relative;
-  transition:transform .15s,box-shadow .15s;overflow:hidden;
-  background:var(--card);
+  position:relative;transition:all .2s;overflow:hidden;
+  background:var(--card2);
+  box-shadow:0 2px 10px rgba(0,0,0,.25);
 }
 .lc-card:active{transform:scale(.88)}
-.lc-card:hover{box-shadow:0 0 0 2px var(--red)}
-.lc-inner{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.2}
-.lc-live-dot{position:absolute;bottom:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--red);border:1.5px solid rgba(0,0,0,.5);animation:blink 1.5s infinite}
+.lc-card.active-ch{border-color:var(--ch-color,var(--red));box-shadow:0 0 0 3px color-mix(in srgb,var(--ch-color,var(--red)) 30%,transparent)}
+.lc-logo{width:46px;height:46px;object-fit:contain;border-radius:6px}
+.lc-label{font-size:9px;font-weight:800;color:var(--t3);text-align:center;max-width:68px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lc-live-dot{position:absolute;top:5px;left:5px;width:7px;height:7px;border-radius:50%;background:#22c55e;border:1.5px solid rgba(0,0,0,.5);animation:blink 1.5s infinite}
 
 /* PLAYER */
 #player{display:none;margin:0 10px;border-radius:14px;overflow:hidden;border:1px solid var(--b);background:#000}
@@ -330,6 +335,24 @@ input[type=range]{width:100%;accent-color:var(--red)}
 .share-opt-ico{font-size:26px}
 .share-opt-lbl{font-size:11px;font-weight:700;color:var(--t2)}
 .share-cancel{width:100%;padding:13px;border-radius:14px;border:none;background:var(--card2);color:var(--t2);font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer}
+
+/* ── Trending Section ── */
+#trending-section{padding:10px 10px 0;display:none}
+.trend-header{display:flex;align-items:center;gap:6px;margin-bottom:8px}
+.trend-title{font-size:11px;font-weight:900;color:var(--t3);letter-spacing:.05em;text-transform:uppercase}
+.trend-fire{font-size:14px;animation:fire-pulse 1.5s ease-in-out infinite}
+@keyframes fire-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+.trend-cards{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:4px}
+.trend-cards::-webkit-scrollbar{display:none}
+.trend-card{flex-shrink:0;width:200px;background:var(--card);border:1px solid var(--b);border-radius:14px;padding:11px 13px;cursor:pointer;transition:all .18s;position:relative;overflow:hidden;text-decoration:none}
+.trend-card:active{transform:scale(.97)}
+.trend-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),var(--accent))}
+.trend-badge{display:inline-flex;align-items:center;gap:3px;background:var(--red2);border:1px solid rgba(229,62,62,.3);color:var(--red);font-size:9px;font-weight:800;padding:2px 7px;border-radius:20px;margin-bottom:6px}
+.trend-kw{font-size:13px;font-weight:800;color:var(--t);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.trend-sources{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap}
+.trend-src-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.trend-src-name{font-size:9px;color:var(--t3);font-weight:600}
+.trend-divider{height:1px;background:var(--b);margin:6px 10px 0}
 </style>
 </head>
 <body>
@@ -432,45 +455,69 @@ input[type=range]{width:100%;accent-color:var(--red)}
     <button class="topic-chip" data-t="world" onclick="setTopic('world')">🌍 עולם</button>
   </div>
   <div id="breaking-banner"></div>
-  <div class="live-row">
-    <button class="lc-card" onclick="openLive('https://www.kan.org.il/live/','כאן 11')">
-      <div class="lc-inner" style="background:#0a1628;color:#fff">
-        <span style="font-size:10px;font-weight:700;opacity:.7">כאן</span>
-        <span style="font-size:22px;font-weight:900;line-height:1">11</span>
+    <div class="live-row">
+    <button class="lc-wrap" onclick="openLive('https://www.kan.org.il/live/','כאן 11')">
+      <div class="lc-card" style="--ch-color:#1a56db;background:#0a1628">
+        <img class="lc-logo" src="https://www.kan.org.il/favicon.ico" alt="כאן 11"
+          onerror="this.style.display='none';this.parentElement.innerHTML+='<span style=\'font-size:10px;font-weight:900;color:#1a56db\'>כאן </span>'"
+        >
+        <div class="lc-live-dot"></div>
       </div>
-      <div class="lc-live-dot"></div>
+      <span class="lc-label">כאן 11</span>
     </button>
-    <button class="lc-card" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','ערוץ 12')">
-      <div class="lc-inner" style="background:#e8f0ff;color:#1a1aff">
-        <span style="font-size:28px;font-weight:900;line-height:1">12</span>
+    <button class="lc-wrap" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','חדשות 12')">
+      <div class="lc-card" style="--ch-color:#C8102E;background:#fff">
+        <img class="lc-logo" src="https://www.n12.co.il/favicon.ico" alt="חדשות 12"
+          onerror="this.style.display='none';this.parentElement.innerHTML+='<span style=\'font-size:10px;font-weight:900;color:#C8102E\'>חדשו</span>'"
+        >
+        <div class="lc-live-dot"></div>
       </div>
-      <div class="lc-live-dot"></div>
+      <span class="lc-label">חדשות 12</span>
     </button>
-    <button class="lc-card" onclick="openLive('https://13tv.co.il/live/','ערוץ 13')">
-      <div class="lc-inner" style="background:#cc0000;color:#fff">
-        <span style="font-size:26px;font-weight:900;line-height:1">13</span>
-        <span style="font-size:8px;font-weight:700;opacity:.85">רשת</span>
+    <button class="lc-wrap" onclick="openLive('https://13tv.co.il/live/','רשת 13')">
+      <div class="lc-card" style="--ch-color:#8B00FF;background:#fff">
+        <img class="lc-logo" src="https://13tv.co.il/favicon.ico" alt="רשת 13"
+          onerror="this.style.display='none';this.parentElement.innerHTML+='<span style=\'font-size:10px;font-weight:900;color:#8B00FF\'>רשת </span>'"
+        >
+        <div class="lc-live-dot"></div>
       </div>
-      <div class="lc-live-dot"></div>
+      <span class="lc-label">רשת 13</span>
     </button>
-    <button class="lc-card" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')">
-      <div class="lc-inner" style="background:#b91c1c;color:#fff">
-        <span style="font-size:26px;font-weight:900;line-height:1">14</span>
+    <button class="lc-wrap" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')">
+      <div class="lc-card" style="--ch-color:#b45309;background:#fff">
+        <img class="lc-logo" src="https://www.now14.co.il/favicon.ico" alt="ערוץ 14"
+          onerror="this.style.display='none';this.parentElement.innerHTML+='<span style=\'font-size:10px;font-weight:900;color:#b45309\'>ערוץ</span>'"
+        >
+        <div class="lc-live-dot"></div>
       </div>
-      <div class="lc-live-dot"></div>
+      <span class="lc-label">ערוץ 14</span>
     </button>
-    <a class="lc-card" href="https://glglz.maariv.co.il/" target="_blank">
-      <div class="lc-inner" style="background:#4c1d95;color:#fbbf24">
-        <span style="font-size:11px;font-weight:900;line-height:1.3">גלגלצ</span>
+    <a class="lc-wrap" href="https://glglz.maariv.co.il/" target="_blank" rel="noopener" >
+      <div class="lc-card" style="--ch-color:#7c3aed;background:#4c1d95">
+        <img class="lc-logo" src="https://glglz.maariv.co.il/favicon.ico" alt="גלגלצ"
+          onerror="this.style.display='none';this.parentElement.innerHTML+='<span style=\'font-size:10px;font-weight:900;color:#7c3aed\'>גלגל</span>'"
+        >
+        <div class="lc-live-dot"></div>
       </div>
-      <div class="lc-live-dot"></div>
+      <span class="lc-label">גלגלצ</span>
     </a>
-    <a class="lc-card" href="https://glz.co.il/" target="_blank">
-      <div class="lc-inner" style="background:#1e3a8a;color:#fbbf24">
-        <span style="font-size:14px;font-weight:900">גלצ</span>
+    <a class="lc-wrap" href="https://glz.co.il/" target="_blank" rel="noopener" >
+      <div class="lc-card" style="--ch-color:#1e40af;background:#1e3a8a">
+        <img class="lc-logo" src="https://glz.co.il/favicon.ico" alt="גלץ"
+          onerror="this.style.display='none';this.parentElement.innerHTML+='<span style=\'font-size:10px;font-weight:900;color:#1e40af\'>גלץ</span>'"
+        >
+        <div class="lc-live-dot"></div>
       </div>
-      <div class="lc-live-dot"></div>
+      <span class="lc-label">גלץ</span>
     </a>
+  </div>
+  <div id="trending-section">
+    <div class="trend-header">
+      <span class="trend-fire">🔥</span>
+      <span class="trend-title">כולם מדברים על זה</span>
+    </div>
+    <div class="trend-cards" id="trend-cards"></div>
+    <div class="trend-divider"></div>
   </div>
   <div id="nlist"><div class="empty"><div class="empty-ico" style="animation:blink 1s infinite;display:inline-block">📡</div><div class="empty-txt">טוען חדשות...<br><span style="font-size:9px;opacity:.5">מתחבר לערוצים</span></div></div></div>
 </div>
@@ -813,6 +860,84 @@ async function aiSum(btn){
 }
 
 // News cards
+
+// ── TRENDING ──
+function hebrewStem(w){
+  // הסר תחיליות נפוצות
+  return w.replace(/^(ה|ו|ב|ל|מ|ש|כ|ל|אל|על|עם|בין|כי|אם)/,'').replace(/['".,!?:;]/g,'');
+}
+
+function titleWords(title){
+  return (title||'').split(/\s+/)
+    .map(w=>hebrewStem(w))
+    .filter(w=>w.length>=3)
+    .filter(w=>!['אמר','אמרה','לפי','עוד','כבר','היום','אחרי','לאחר','בעקבות','בין','על','עם','את','של','כי','הוא','היא','הם','אבל','גם','רק','כל','זה','זו'].includes(w));
+}
+
+function buildTrending(list){
+  const sec = document.getElementById('trending-section');
+  const el  = document.getElementById('trend-cards');
+  if(!el) return;
+
+  // Group items by shared keywords (2+ channels)
+  const wordMap = {}; // word → [items]
+  list.forEach(item => {
+    titleWords(item.title).forEach(w => {
+      if(!wordMap[w]) wordMap[w] = [];
+      if(!wordMap[w].find(x=>x.id===item.id)) wordMap[w].push(item);
+    });
+  });
+
+  // Build clusters: items that share a word with 2+ different sources
+  const clusters = [];
+  const usedIds = new Set();
+
+  Object.entries(wordMap)
+    .filter(([w,its]) => {
+      const srcs = new Set(its.map(i=>i.source));
+      return srcs.size >= 2;
+    })
+    .sort((a,b) => {
+      const sa = new Set(a[1].map(i=>i.source));
+      const sb = new Set(b[1].map(i=>i.source));
+      return sb.size - sa.size;
+    })
+    .slice(0, 6)
+    .forEach(([word, its]) => {
+      const srcs = [...new Set(its.map(i=>i.source))];
+      if(srcs.length < 2) return;
+      // Pick best title (longest, most informative)
+      const best = its.slice().sort((a,b)=>(b.title||'').length-(a.title||'').length)[0];
+      if(usedIds.has(best.id)) return;
+      usedIds.add(best.id);
+      clusters.push({ keyword: word, title: best.title, link: best.link, sources: srcs.slice(0,4), count: srcs.length });
+    });
+
+  if(clusters.length < 2){ sec.style.display='none'; return; }
+  sec.style.display='block';
+  el.innerHTML='';
+
+  clusters.slice(0,5).forEach(cl => {
+    const card = document.createElement('a');
+    card.className = 'trend-card';
+    card.href = cl.link || '#';
+    card.target = '_blank';
+    card.rel = 'noopener';
+
+    const srcDots = cl.sources.map(sid => {
+      const ch = CH[sid]||{c:'#888',n:sid};
+      return '<span class="trend-src-dot" style="background:'+ch.c+'" title="'+ch.n+'"></span>';
+    }).join('');
+
+    card.innerHTML =
+      '<div class="trend-badge">🔴 '+cl.count+' ערוצים</div>' +
+      '<div class="trend-kw">'+cl.title+'</div>' +
+      '<div class="trend-sources">'+srcDots+'</div>';
+
+    el.appendChild(card);
+  });
+}
+
 function buildList(){
   const el=document.getElementById('nlist');
   // Source filter
@@ -831,6 +956,7 @@ function buildList(){
   }
   // Breaking detection (always on full list)
   detectBreaking(cur==='all'?items:items.filter(x=>x.source===cur));
+  buildTrending(cur==='all'?items:list);
   if(!list.length){el.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">אין כתבות</div></div>';return;}
   el.innerHTML='';
   const sep=document.createElement('div');sep.className='sep';
