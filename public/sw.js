@@ -1,4 +1,5 @@
-const CACHE = 'hdshot-il-v13';
+const APP_VERSION = '14';
+const CACHE = 'hdshot-il-v' + APP_VERSION;
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -14,14 +15,32 @@ self.addEventListener('activate', e => {
         return caches.delete(k);
       }))
     ).then(() => self.clients.claim())
+     .then(() => {
+       // Tell all open tabs to reload after update
+       self.clients.matchAll({ type: 'window' }).then(clients => {
+         clients.forEach(c => c.postMessage({ type: 'SW_UPDATED', version: APP_VERSION }));
+       });
+     })
   );
 });
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  // Never intercept API calls — always go to network
   const url = e.request.url;
-  if (url.includes('/api/') || url.includes('onrender.com/api')) return;
+  // Never cache API calls
+  if (url.includes('/api/')) return;
+  // Always network-first for HTML (so updates land immediately)
+  if (url.endsWith('/') || url.includes('index.html')) {
+    e.respondWith(
+      fetch(e.request).then(res => {
+        const clone = res.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return res;
+      }).catch(() => caches.match(e.request))
+    );
+    return;
+  }
+  // Cache-first for assets
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request))
   );
@@ -36,10 +55,12 @@ self.addEventListener('push', e => {
     body: data.body || 'אזעקה פעילה',
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
-    vibrate: data.vibrate || [300, 100, 300, 100, 300],
-    requireInteraction: true,
+    image: data.image || undefined,
+    vibrate: data.vibrate || [300, 100, 300],
+    requireInteraction: data.requireInteraction || false,
     dir: 'rtl', lang: 'he',
-    tag: 'alert', renotify: true,
+    tag: data.tag || 'news',
+    renotify: data.renotify !== false,
     data: data.data || { url: '/' }
   };
   e.waitUntil(self.registration.showNotification(title, options));
@@ -50,12 +71,8 @@ self.addEventListener('notificationclick', e => {
   const url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const client of list) {
-        if (client.url.includes(self.location.origin)) {
-          client.focus();
-          client.postMessage({ type: 'ALERT_CLICK', url });
-          return;
-        }
+      for (const c of list) {
+        if (c.url.includes(self.location.origin)) { c.focus(); return; }
       }
       return clients.openWindow(url);
     })
