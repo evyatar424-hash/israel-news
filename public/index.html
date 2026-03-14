@@ -108,9 +108,9 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 }
 /* Modern top accent line */
 #hdr::before{
-  content:'';display:block;height:3px;
-  background:linear-gradient(90deg, var(--blue) 0%, var(--sky) 50%, var(--blue) 100%);
-  background-size:200% 100%;animation:shimmer 4s linear infinite;
+  content:'';display:block;height:2px;
+  background:linear-gradient(90deg, var(--red) 0%, var(--blue) 35%, var(--sky) 65%, var(--green) 100%);
+  opacity:.7;
 }
 .h-top{
   display:flex;align-items:center;
@@ -139,7 +139,7 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 .live-txt{font-size:8px;font-weight:800;color:var(--red);letter-spacing:2px}
 
 .hclk-wrap{flex-shrink:0;text-align:left}
-#hclk{font-size:16px;font-weight:700;color:var(--blue-l);letter-spacing:.5px;line-height:1;font-variant-numeric:tabular-nums}
+#hclk{font-size:16px;font-weight:700;color:var(--t1);letter-spacing:.5px;line-height:1;font-variant-numeric:tabular-nums}
 #hdate{font-size:8px;color:var(--t3);margin-top:2px;letter-spacing:.5px}
 
 /* Alert bar */
@@ -158,24 +158,24 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 /* Ticker */
 .ticker-wrap{
   display:flex;align-items:center;
-  height:30px;background:var(--s1);
+  height:30px;background:var(--bg);
   border-bottom:1px solid var(--b);overflow:hidden;
 }
 .ticker-label{
   flex-shrink:0;display:flex;align-items:center;gap:5px;
   padding:0 12px 0 10px;height:100%;
-  border-left:3px solid var(--blue);
-  background:linear-gradient(90deg,rgba(99,102,241,.12),rgba(99,102,241,.03));
+  border-left:2px solid var(--red);
+  background:var(--red-d);
 }
-.ticker-dot{width:5px;height:5px;border-radius:50%;background:var(--sky);animation:blink .9s infinite;box-shadow:0 0 6px var(--sky)}
-.ticker-badge{font-size:7px;font-weight:900;color:var(--sky);letter-spacing:2.5px}
+.ticker-dot{width:5px;height:5px;border-radius:50%;background:var(--red);animation:blink .9s infinite;box-shadow:0 0 6px var(--red)}
+.ticker-badge{font-size:7px;font-weight:900;color:var(--red);letter-spacing:2.5px}
 .ticker-txt{font-size:12px;font-weight:500;color:var(--t2);padding:0 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .3s}
 
 /* AI bar */
 .ai-bar{
   display:flex;align-items:center;justify-content:space-between;
   padding:4px 14px;border-bottom:1px solid var(--b);
-  background:linear-gradient(90deg,rgba(16,185,129,.04),transparent);
+  background:var(--bg);
 }
 .ai-bar-left{display:flex;align-items:center;gap:6px}
 .ai-bar-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse-g 2.2s infinite;box-shadow:0 0 7px rgba(16,185,129,.5)}
@@ -183,7 +183,7 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 .ai-bar-count{font-size:10px;color:var(--t3)}
 
 /* Tabs */
-.tabs{display:flex;padding:8px 10px;gap:6px;background:var(--bg);border-bottom:1px solid var(--b)}
+.tabs{display:flex;padding:8px 10px;gap:6px;background:var(--s1);border-bottom:1px solid var(--b)}
 .tab{
   flex:1;padding:9px 0;border-radius:var(--r1);
   background:rgba(255,255,255,.02);
@@ -212,23 +212,20 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 .live-section{
   padding:14px 0 18px;
   border-bottom:1px solid var(--b2);
-  background:
-    linear-gradient(180deg, rgba(99,102,241,.08) 0%, rgba(17,17,19,0) 100%),
-    linear-gradient(0deg, var(--s1) 0%, var(--bg) 100%);
+  background:var(--s1);
   position:relative;overflow:hidden;
 }
 .live-section::before{
-  content:'';position:absolute;top:0;left:0;right:0;height:2px;
-  background:linear-gradient(90deg,transparent,var(--blue) 25%,var(--sky) 50%,var(--blue) 75%,transparent);
-  background-size:200% 100%;animation:shimmer 3s linear infinite;
+  content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--b3) 30%,var(--b3) 70%,transparent);
 }
 .sec-label{
-  font-size:9px;font-weight:900;color:var(--sky);
+  font-size:9px;font-weight:900;color:var(--t2);
   letter-spacing:3px;text-transform:uppercase;
   margin-bottom:14px;padding:0 14px;
   display:flex;align-items:center;gap:8px;
 }
-.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(56,189,248,.3),transparent)}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,var(--b2),transparent)}
 
 /* scroll row — needs padding-top for antenna space */
 .live-row{
@@ -299,7 +296,7 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 }
 .lc-wrap:hover .lc-card{
   border-color:var(--sky);
-  box-shadow:var(--sh2), 0 0 16px rgba(56,189,248,.3), inset 0 1px 0 rgba(255,255,255,.10);
+  box-shadow:var(--sh2), 0 0 16px rgba(34,211,238,.25), inset 0 1px 0 rgba(255,255,255,.10);
 }
 .lc-card img{
   width:80%;height:80%;object-fit:contain;display:block;
@@ -388,7 +385,7 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
   position:relative;aspect-ratio:16/9;
   overflow:hidden;background:var(--s1);min-height:200px;
 }
-.hero-img{width:100%;height:100%;object-fit:cover;display:block}
+.hero-img{width:100%;height:100%;object-fit:cover;display:block;image-rendering:auto;-webkit-backface-visibility:hidden;backface-visibility:hidden}
 .hero-grad{
   position:absolute;inset:0;
   background:linear-gradient(
@@ -507,7 +504,7 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 .nc-bar{position:absolute;top:0;right:0;bottom:0;width:4px;border-radius:0 var(--r2) var(--r2) 0}
 /* Image with gradient fade */
 .nc-img-wrap{position:relative;overflow:hidden}
-.nc-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;transition:transform .4s ease}
+.nc-img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;transition:transform .4s ease;image-rendering:auto;-webkit-backface-visibility:hidden;backface-visibility:hidden}
 .nc:hover .nc-img{transform:scale(1.03)}
 .nc-img-wrap::after{
   content:'';position:absolute;bottom:0;left:0;right:0;height:50px;
@@ -1184,14 +1181,48 @@ function goodImg(url,src){
 
 function upgradeImgUrl(url){
   if(!url||url.length<10)return url;
-  // ynet — largest crop
-  url=url.replace(/crop_images\/\d+\/\d+\//,'crop_images/1200/675/');
-  url=url.replace(/_\d+\.jpg/,'_1200.jpg');
-  // haaretz
-  url=url.replace(/\?imageVersion=\d+x\d+/,'?imageVersion=1200x675');
-  url=url.replace(/height=\d+/,'height=675').replace(/width=\d+/,'width=1200');
-  // walla
-  url=url.replace(/\/\d+x\d+\//,'/1200x675/');
+  try{
+    // ynet — largest crop
+    if(url.includes('ynet')){
+      url=url.replace(/crop_images\/\d+\/\d+\//,'crop_images/1200/675/');
+      url=url.replace(/_\d+\.jpg/,'_1200.jpg');
+      url=url.replace(/\/picserver\d\/\d+\//,(m)=>m.replace(/\/\d+\//,'/1200/'));
+    }
+    // haaretz
+    if(url.includes('haaretz')){
+      url=url.replace(/\?imageVersion=\d+x\d+/,'?imageVersion=1200x675');
+      url=url.replace(/height=\d+/,'height=675').replace(/width=\d+/,'width=1200');
+    }
+    // walla
+    if(url.includes('walla.co.il')){
+      url=url.replace(/\/\d+x\d+\//,'/1200x675/');
+    }
+    // Google News thumbnails — extract the real image URL if possible
+    if(url.includes('news.google.com')){
+      url=url.replace(/=w\d+(-h\d+)?(-[a-zA-Z]+)?/,'=w1200-h675-rw');
+    }
+    // mako
+    if(url.includes('mako.co.il')){
+      url=url.replace(/\/\d+x\d+\//,'/1200x675/');
+      url=url.replace(/width=\d+/,'width=1200').replace(/height=\d+/,'height=675');
+    }
+    // calcalist
+    if(url.includes('calcalist')){
+      url=url.replace(/_\d+\.jpg/,'_1200.jpg');
+      url=url.replace(/\/\d+\/\d+\/crop\//,'/1200/675/crop/');
+    }
+    // n12
+    if(url.includes('n12.co.il')||url.includes('maariv.co.il')){
+      url=url.replace(/\/\d+x\d+\//,'/1200x675/');
+      url=url.replace(/width=\d+/,'width=1200').replace(/height=\d+/,'height=675');
+    }
+    // globes
+    if(url.includes('globes.co.il')){
+      url=url.replace(/\/\d+x\d+\//,'/1200x675/');
+    }
+    // Generic: try upgrading common thumbnail patterns
+    url=url.replace(/[\?&]w=\d+/,'?w=1200').replace(/[\?&]h=\d+/,'&h=675');
+  }catch(e){}
   return url;
 }
 function buildHero(item){
@@ -1401,13 +1432,14 @@ function buildList(){
     const ch=CH[item.source]||{n:item.source,c:'#888',i:'📰'};
     const isNew=!seen.has(item.id);
     const hi=goodImg(item.image,item.source);
+    const upgradedImg = hi ? upgradeImgUrl(item.image) : '';
     const a=document.createElement('a');
     a.className='nc';a.href=safeUrl(item.link);a.target='_blank';a.rel='noopener';
     a.style.animationDelay=Math.min(i,12)*0.028+'s';
     const logoHtml = ch.logo
       ? '<img style="width:16px;height:16px;border-radius:5px;object-fit:contain;background:#fff;padding:1px;margin-left:5px;vertical-align:middle;flex-shrink:0" src="'+safeUrl(ch.logo)+'" onerror="this.remove()">'
       : '';
-    const imgHtml = hi ? '<div class="nc-img-wrap"><img class="nc-img" src="'+safeUrl(item.image)+'" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>' : '';
+    const imgHtml = hi ? '<div class="nc-img-wrap"><img class="nc-img" src="'+safeUrl(upgradedImg)+'" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>' : '';
     a.innerHTML='<div class="nc-bar" style="background:'+ch.c+'"></div>'+imgHtml+
       '<div class="nc-body"><div class="nc-top"><span class="nc-src" style="background:'+ch.c+'18;color:'+ch.c+'">'+logoHtml+safeText(ch.n)+'</span><div class="nc-right"><span class="nc-time">'+safeText(item.timeAgo)+'</span>'+(isNew?'<span class="nc-new">חדש</span>':'')+'</div></div>'+
       '<div class="nc-title">'+safeText(item.title)+'</div>'+(item.desc?'<div class="nc-desc">'+safeText(item.desc)+'</div>':'')+
