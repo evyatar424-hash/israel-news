@@ -142,7 +142,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 const parser = new Parser({
   timeout: 5000,
-  customFields: { item: ['media:content','media:thumbnail','enclosure'] },
+  customFields: { item: ['media:content','media:thumbnail','media:group','enclosure','image','description'] },
   headers: { 'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)' }
 });
 
@@ -169,44 +169,70 @@ const CHANNELS = [
 
 // Block known logo/placeholder images
 const BAD_PATTERNS = [
-  'mivzakim', '/logo', 'placeholder', 'noimage', 'no-image',
-  'RenderImage', 'walla.co.il/rb/', 'breaking_news', 'brand', 'favicon',
+  'mivzakim', 'placeholder', 'noimage', 'no-image',
+  'RenderImage', 'walla.co.il/rb/', 'breaking_news',
   // Walla breaking logo: img.walla.co.il/v2/image/... with specific logo IDs
   '2907054','2907055','2907056','2907057','2907058','2907059', // known walla logo IDs
 ];
 
+// Separate pattern: only block if URL ENDS with or IS a logo file
+const LOGO_PATTERNS = ['/logo.', '/logo-', '/brand.', '/favicon.', 'favicon.ico'];
+
 // Sources that NEVER have real images — skip image entirely
-const NO_IMAGE_SOURCES = new Set(['maariv']);
+const NO_IMAGE_SOURCES = new Set([]);
 
 function isRealImage(url, sourceId) {
   if (!url || url.length < 12) return false;
   if (sourceId && NO_IMAGE_SOURCES.has(sourceId)) return false;
   const l = url.toLowerCase();
   for (const p of BAD_PATTERNS) if (l.includes(p.toLowerCase())) return false;
-  // Walla blue mivzakim logo check — their logo image is always the same file
+  // Logo check — more precise: only block if logo is in the filename, not deep in path
+  for (const p of LOGO_PATTERNS) if (l.includes(p)) return false;
+  // Walla blue mivzakim logo check
   if (url.includes('walla') && url.includes('/image/') && url.includes('2')) {
-    // If URL ends with known logo dimensions query or has no descriptive path
     if (/\/image\/\d{7}/.test(url) && url.length < 80) return false;
   }
+  // Block tiny images (1x1 trackers, spacers)
+  if (/[?&](w|width)=(1|2|3|4|5|10|16|20)(&|$)/.test(url)) return false;
   return true;
 }
 
 function extractImage(item, sourceId) {
   try {
     const candidates = [];
-    // Priority 1: media tags
+    // Priority 1: media tags (all variations)
     if (item['media:content']?.$?.url) candidates.push(item['media:content'].$.url);
     if (item['media:thumbnail']?.$?.url) candidates.push(item['media:thumbnail'].$.url);
+    // media:group can contain multiple media:content
+    if (item['media:group']?.['media:content']) {
+      const mg = item['media:group']['media:content'];
+      if (Array.isArray(mg)) mg.forEach(m => { if (m?.$?.url) candidates.push(m.$.url); });
+      else if (mg?.$?.url) candidates.push(mg.$.url);
+    }
     // Priority 2: enclosure
     if (item.enclosure?.url && item.enclosure?.type?.startsWith('image')) candidates.push(item.enclosure.url);
-    if (item.enclosure?.url && !item.enclosure?.type) candidates.push(item.enclosure.url); // some feeds omit type
-    // Priority 3: img tags in HTML content
+    if (item.enclosure?.url && !item.enclosure?.type) candidates.push(item.enclosure.url);
+    // Priority 3: img tags in HTML content (up to 5 candidates)
     const html = item.content || item['content:encoded'] || item.summary || item.description || '';
     const imgs = [...html.matchAll(/<img[^>]+src=["']([^"']{20,})["']/g)].map(m=>m[1]);
-    candidates.push(...imgs.slice(0,3));
-    // Priority 4: srcset
-    const srcset = html.match(/srcset=["']([^"' ,]{20,})/);
-    if (srcset) candidates.push(srcset[1]);
+    candidates.push(...imgs.slice(0,5));
+    // Priority 4: srcset — pick largest
+    const srcsets = [...html.matchAll(/srcset=["']([^"']+)["']/g)].map(m=>m[1]);
+    srcsets.forEach(ss => {
+      const parts = ss.split(',').map(s=>s.trim()).filter(Boolean);
+      // Pick the largest (last) srcset entry
+      if (parts.length > 0) {
+        const last = parts[parts.length-1].split(/\s+/)[0];
+        if (last && last.length > 15) candidates.push(last);
+      }
+    });
+    // Priority 5: og:image or twitter:image meta-like patterns in content
+    const ogMatch = html.match(/(?:og:image|twitter:image)[^>]*content=["']([^"']{20,})["']/i);
+    if (ogMatch) candidates.push(ogMatch[1]);
+    // Priority 6: data-src for lazy loaded images
+    const dataSrc = [...html.matchAll(/data-src=["']([^"']{20,})["']/g)].map(m=>m[1]);
+    candidates.push(...dataSrc.slice(0,3));
+    // Return first valid, upgraded image
     for (const url of candidates) {
       if (isRealImage(url, sourceId)) return upgradeImageUrl(url, sourceId);
     }
