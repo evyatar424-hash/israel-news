@@ -2028,15 +2028,114 @@ showAlertPanel('unavail');
 connectStream();
 pollOnce();
 
-// ── AUTO-UPDATE ──
-if('serviceWorker'in navigator&&!location.hostname.includes('claude')){
-  navigator.serviceWorker.register('/sw.js');
-  navigator.serviceWorker.addEventListener('message',e=>{
-    if(e.data&&e.data.type==='SW_UPDATED')showUpdateBanner();
+// ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
+const CLIENT_VERSION = '22';
+
+(function initAutoUpdate(){
+  if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;
+
+  // 1. Register SW with aggressive update check
+  navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then(reg => {
+    console.log('[UPDATE] SW registered');
+
+    // When a new SW is found, force it to activate immediately
+    reg.addEventListener('updatefound', () => {
+      const newSW = reg.installing;
+      if (!newSW) return;
+      newSW.addEventListener('statechange', () => {
+        if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+          // New version installed — tell it to take over NOW
+          console.log('[UPDATE] New SW installed, forcing activation...');
+          newSW.postMessage('SKIP_WAITING');
+        }
+      });
+    });
+  }).catch(e => console.log('[UPDATE] SW registration failed:', e.message));
+
+  // 2. When new SW takes control → auto-reload (no banner, no click)
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    console.log('[UPDATE] New SW active — reloading...');
+    location.reload();
   });
-}
-setInterval(checkForUpdate,5*60*1000);
-setTimeout(checkForUpdate,3000);
+
+  // 3. Listen for SW_UPDATED message as backup
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data && e.data.type === 'SW_UPDATED') {
+      if (refreshing) return;
+      refreshing = true;
+      console.log('[UPDATE] SW message — reloading...');
+      location.reload();
+    }
+  });
+
+  // 4. Periodic version check against server API (every 2 min)
+  async function checkServerVersion() {
+    try {
+      const r = await fetch('/api/version?_=' + Date.now(), { cache: 'no-store' });
+      const d = await r.json();
+      if (d.version && d.version !== CLIENT_VERSION) {
+        console.log('[UPDATE] Server version ' + d.version + ' !== client ' + CLIENT_VERSION);
+        // Force SW update check
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          // If SW didn't catch it, nuclear option: unregister + reload
+          setTimeout(() => {
+            if (!refreshing) {
+              console.log('[UPDATE] Nuclear: clearing everything...');
+              nuclearUpdate();
+            }
+          }, 5000);
+        } else {
+          nuclearUpdate();
+        }
+      }
+    } catch(e) {}
+  }
+
+  // 5. Nuclear update: clear all caches, unregister SW, hard reload
+  async function nuclearUpdate() {
+    try {
+      // Delete all caches
+      const keys = await caches.keys();
+      await Promise.all(keys.map(k => caches.delete(k)));
+      // Unregister SW
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) await reg.unregister();
+      // Hard reload — bypass all caches
+      location.href = location.origin + '/?v=' + Date.now();
+    } catch(e) {
+      location.reload(true);
+    }
+  }
+
+  // 6. Check for SW update frequently
+  function checkSWUpdate() {
+    navigator.serviceWorker.getRegistration().then(r => { if(r) r.update(); });
+  }
+
+  // Schedule checks
+  setTimeout(checkServerVersion, 3000);     // First check after 3s
+  setInterval(checkServerVersion, 120000);  // Then every 2 min
+  setInterval(checkSWUpdate, 60000);        // SW update check every 1 min
+
+  // 7. On visibility change (user returns to app) — check immediately
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      checkSWUpdate();
+      setTimeout(checkServerVersion, 1000);
+    }
+  });
+
+  // 8. On online (reconnect after offline) — check immediately
+  window.addEventListener('online', () => {
+    setTimeout(checkServerVersion, 2000);
+  });
+
+})();
 
 // ── SHARE ──
 let _shareUrl='',_shareTitle='',_shareSrc='';
@@ -2062,19 +2161,7 @@ function closeShare(e){
   if(e&&e.target&&e.target.id!=='share-overlay')return;
   document.getElementById('share-overlay').classList.remove('on');
 }
-// ── AUTO-UPDATE ──
-function checkForUpdate(){
-  if(!('serviceWorker'in navigator))return;
-  navigator.serviceWorker.getRegistration().then(r=>{if(r)r.update();});
-}
-function showUpdateBanner(){
-  if(document.getElementById('upd-b'))return;
-  const b=document.createElement('div');b.id='upd-b';
-  b.style.cssText='position:fixed;bottom:84px;left:50%;transform:translateX(-50%);z-index:9998;background:var(--s1);border:1px solid var(--blue-b);color:var(--blue);padding:9px 20px;border-radius:20px;font-size:12px;font-weight:700;font-family:var(--f);box-shadow:0 4px 20px rgba(0,0,0,.3);cursor:pointer;white-space:nowrap;animation:fade-up .3s ease';
-  b.textContent='✨ גרסה חדשה — לחץ לרענון';
-  b.onclick=()=>location.reload(true);
-  document.body.appendChild(b);setTimeout(()=>b.remove(),12000);
-}
+// (update system moved to AUTO-UPDATE ENGINE v3 above)
 
 </script>
 </body>
