@@ -220,23 +220,43 @@ function upgradeImageUrl(url, sourceId) {
   try {
     // ynet: change size params to larger
     if (url.includes('ynet-pic') || url.includes('ynet.co.il')) {
-      url = url.replace(/\/picserver\d\/\d+\//, (m) => m.replace(/\/\d+\//, '/800/'));
-      url = url.replace(/_\d+\.jpg/, '_800.jpg');
-      url = url.replace(/crop_images\/\d+\/\d+\//, (m) => m.replace(/\/\d+\/\d+\//, '/800/450/'));
+      url = url.replace(/\/picserver\d\/\d+\//, (m) => m.replace(/\/\d+\//, '/1200/'));
+      url = url.replace(/_\d+\.jpg/, '_1200.jpg');
+      url = url.replace(/crop_images\/\d+\/\d+\//, (m) => m.replace(/\/\d+\/\d+\//, '/1200/675/'));
     }
     // haaretz: upgrade to larger
     if (url.includes('haaretz.co.il') || url.includes('img.haaretz')) {
       url = url.replace(/\?imageVersion=\d+x\d+/, '?imageVersion=1200x675');
-      url = url.replace(/height=\d+/, 'height=450').replace(/width=\d+/, 'width=800');
+      url = url.replace(/height=\d+/, 'height=675').replace(/width=\d+/, 'width=1200');
     }
     // walla: upgrade
     if (url.includes('walla.co.il')) {
-      url = url.replace(/\/\d+x\d+\//, '/800x450/');
+      url = url.replace(/\/\d+x\d+\//, '/1200x675/');
     }
-    // google news thumbnails — small, skip
+    // google news thumbnails — request largest available
     if (url.includes('news.google.com') && url.includes('=w')) {
-      url = url.replace(/=w\d+-h\d+/, '=w800-h450');
+      url = url.replace(/=w\d+(-h\d+)?(-[a-zA-Z]+)?/, '=w1200-h675-rw');
     }
+    // mako
+    if (url.includes('mako.co.il')) {
+      url = url.replace(/\/\d+x\d+\//, '/1200x675/');
+      url = url.replace(/width=\d+/, 'width=1200').replace(/height=\d+/, 'height=675');
+    }
+    // calcalist
+    if (url.includes('calcalist')) {
+      url = url.replace(/_\d+\.jpg/, '_1200.jpg');
+    }
+    // n12 / maariv
+    if (url.includes('n12.co.il') || url.includes('maariv.co.il')) {
+      url = url.replace(/\/\d+x\d+\//, '/1200x675/');
+      url = url.replace(/width=\d+/, 'width=1200').replace(/height=\d+/, 'height=675');
+    }
+    // globes
+    if (url.includes('globes.co.il')) {
+      url = url.replace(/\/\d+x\d+\//, '/1200x675/');
+    }
+    // Generic w/h params
+    url = url.replace(/[\?&]w=\d+/, (m) => m[0] + 'w=1200');
   } catch(e) {}
   return url;
 }
