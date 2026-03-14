@@ -1,4 +1,4 @@
-const APP_VERSION = '14';
+const APP_VERSION = '15';
 const CACHE = 'hdshot-il-v' + APP_VERSION;
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
@@ -71,8 +71,11 @@ self.addEventListener('notificationclick', e => {
   const url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
-      for (const c of list) {
-        if (c.url.includes(self.location.origin)) { c.focus(); return; }
+      // Find existing tab with this app
+      const appClient = list.find(c => c.url.startsWith(self.location.origin));
+      if (appClient) {
+        appClient.navigate(url);
+        return appClient.focus();
       }
       return clients.openWindow(url);
     })
