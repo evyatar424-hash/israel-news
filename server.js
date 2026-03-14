@@ -30,20 +30,9 @@ function saveSubs() {
 let _webpush=null;try{_webpush=require('web-push');_webpush.setVapidDetails(VAPID_SUBJECT,VAPID_PUBLIC_KEY,VAPID_PRIVATE_KEY);console.log('web-push ✓');}catch(e){console.error('web-push missing:',e.message);}
 
 async function sendWebPush(subscription, payload) {
+  if (!_webpush) return false;
   try {
-    const { endpoint, keys } = subscription;
-    const { p256dh, auth } = keys;
-
-    // Use web-push compatible approach via https
-    // Since we can't install npm packages at runtime, use a fetch-based approach
-    // that works with Render's Node environment which has web-push available if in package.json
-    
-    // Try require web-push (if installed)
-    let webpush;
-    try { webpush = require('web-push'); } catch(e) { return false; }
-    
-    webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
-    await webpush.sendNotification(subscription, JSON.stringify(payload));
+    await _webpush.sendNotification(subscription, JSON.stringify(payload));
     return true;
   } catch(e) {
     if (e.statusCode === 410 || e.statusCode === 404) {
@@ -455,7 +444,6 @@ app.post('/api/ai/summarize', async (req, res) => {
       const text = data?.content?.[0]?.text?.trim();
       if (text) {
         cacheSet(cacheKey, text);
-        if(summaryCache.size>500) summaryCache.delete(summaryCache.keys().next().value);
         res.json({ text });
         return;
       }
@@ -622,7 +610,7 @@ app.get('/api/alerts/stream', (req, res) => {
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
   res.flushHeaders();
-  res.write(`data: ${JSON.stringify({ alert: currentAlert, connected: tzofarConnected })}\n\n`);
+  res.write(`data: ${JSON.stringify({ alert: currentAlert, connected: orefConnected })}\n\n`);
   if (sseClients.size >= MAX_SSE_CLIENTS) {
     // kick oldest client
     const oldest = sseClients.values().next().value;
@@ -637,7 +625,7 @@ app.get('/api/alerts/stream', (req, res) => {
 
 // Polling fallback
 app.get('/api/alerts', (req, res) => {
-  res.json({ alert: currentAlert, connected: tzofarConnected });
+  res.json({ alert: currentAlert, connected: orefConnected });
 });
 
 // History — local cache (populated by Tzofar WebSocket)
@@ -730,7 +718,7 @@ app.post('/api/push/unsubscribe', (req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, tzofar: tzofarConnected, oref: orefConnected }));
+app.get('/health', (req, res) => res.json({ ok: true, items: newsCache.length, oref: orefConnected, sseClients: sseClients.size, pushSubs: pushSubscriptions.length }));
 
 // Memory watchdog — log every 5 min, emergency cleanup if > 420MB
 setInterval(() => {
@@ -870,8 +858,9 @@ async function sendToTelegram(item) {
   const link  = item.link  || 'https://israel-news-wus7.onrender.com';
 
   // Telegram message — RTL, markdown
+  const escaped = title.replace(/[*_[\]()~`>#+=|{}.!-]/g, '\\$&');
   const text = [
-    '📰 *' + title.replace(/[*_[]()~`>#+=|{}.!-]/g, '\\const PORT = process.env.PORT || 3000;') + '*',
+    '📰 *' + escaped + '*',
     '',
     '🔗 ' + src,
     link
