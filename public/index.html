@@ -1169,11 +1169,17 @@ const CH={
   globes:    {n:'גלובס',        c:'#006633', logo:'https://www.globes.co.il/favicon.ico'},
     kan:       {n:'כאן 11',        c:'#1a56db', logo:'https://www.kan.org.il/favicon.ico'},
 };
-const NO_IMG=new Set(['walla','walla_w','maariv']);
+const NO_IMG=new Set([]);
 function goodImg(url,src){
-  if(!url||url.length<12||NO_IMG.has(src))return false;
+  if(!url||url.length<12)return false;
+  // Only block if it's clearly a logo/placeholder filename
   const l=url.toLowerCase();
-  for(const b of ['mivzakim','/logo','placeholder','RenderImage','noimage','favicon','brand'])if(l.includes(b))return false;
+  const fname=l.split('/').pop().split('?')[0];
+  for(const b of ['mivzakim','placeholder','noimage','no-image','RenderImage'])if(l.includes(b))return false;
+  // Block only if filename itself is a logo
+  if(fname.startsWith('logo')||fname.startsWith('brand')||fname==='favicon.ico')return false;
+  // Block tiny tracker images
+  if(/[?&](w|width)=(1|2|5|10|16)(&|$)/.test(url))return false;
   return true;
 }
 
@@ -1229,20 +1235,22 @@ function buildHero(item){
   const el=document.getElementById('hero');
   if(!item){el.innerHTML='';return;}
   const ch=CH[item.source]||{n:item.source,c:'#60a5fa',i:'📰'};
-  item.image=upgradeImgUrl(item.image||'');
-  const hasImg=item.image&&item.image.startsWith('http');
+  const originalImg=item.image||'';
+  const upgradedImg=upgradeImgUrl(originalImg);
+  const hasImg=upgradedImg&&upgradedImg.startsWith('http');
   const logoHtml=ch.logo?`<img src="${safeUrl(ch.logo)}" style="width:14px;height:14px;border-radius:3px;object-fit:contain;opacity:.85;margin-left:5px;vertical-align:middle" onerror="this.remove()">`:'';
   const title=safeText(item.title);
   const desc=safeText((item.desc||'').slice(0,120));
   const link=safeUrl(item.link);
   const time=safeText(item.timeAgo||'');
-  // Only show "מבזק" badge if item is from the last 15 min
   const isFresh = item.ts && (Date.now() - item.ts) < 15*60*1000;
   const badgeHtml = isFresh ? '<div class="hero-tags"><span class="hero-breaking">⚡ מבזק</span></div>' : '<div class="hero-tags"></div>';
+  // Fallback: if upgraded URL fails, try original
+  const fallbackJs = originalImg !== upgradedImg ? `onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src='${safeUrl(originalImg)}';}else{this.closest('.hero-card').innerHTML='<div class=hero-text-card>${badgeHtml}<h2 class=hero-title-text>${title}</h2></div>';}"` : `onerror="this.closest('.hero-card').innerHTML='<div class=hero-text-card>${badgeHtml}<h2 class=hero-title-text>${title}</h2></div>';"`;
   if(hasImg){
     el.innerHTML=`<a class="hero-card" href="${link}" target="_blank" rel="noopener">
       <div class="hero-img-wrap">
-        <img class="hero-img" src="${safeUrl(item.image)}" alt="" loading="lazy" onerror="this.parentElement.parentElement.remove()">
+        <img class="hero-img" src="${safeUrl(upgradedImg)}" alt="" loading="eager" ${fallbackJs}>
         <div class="hero-grad"></div>
         <div class="hero-body">
           ${badgeHtml}
@@ -1439,7 +1447,7 @@ function buildList(){
     const logoHtml = ch.logo
       ? '<img style="width:16px;height:16px;border-radius:5px;object-fit:contain;background:#fff;padding:1px;margin-left:5px;vertical-align:middle;flex-shrink:0" src="'+safeUrl(ch.logo)+'" onerror="this.remove()">'
       : '';
-    const imgHtml = hi ? '<div class="nc-img-wrap"><img class="nc-img" src="'+safeUrl(upgradedImg)+'" alt="" loading="lazy" onerror="this.parentElement.remove()"></div>' : '';
+    const imgHtml = hi ? '<div class="nc-img-wrap"><img class="nc-img" src="'+safeUrl(upgradedImg)+'" alt="" loading="lazy" onerror="if(this.dataset.fell){this.parentElement.remove();}else{this.dataset.fell=1;this.src=\''+safeUrl(item.image)+'\';}"></div>' : '';
     a.innerHTML='<div class="nc-bar" style="background:'+ch.c+'"></div>'+imgHtml+
       '<div class="nc-body"><div class="nc-top"><span class="nc-src" style="background:'+ch.c+'18;color:'+ch.c+'">'+logoHtml+safeText(ch.n)+'</span><div class="nc-right"><span class="nc-time">'+safeText(item.timeAgo)+'</span>'+(isNew?'<span class="nc-new">חדש</span>':'')+'</div></div>'+
       '<div class="nc-title">'+safeText(item.title)+'</div>'+(item.desc?'<div class="nc-desc">'+safeText(item.desc)+'</div>':'')+
