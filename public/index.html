@@ -207,42 +207,122 @@ button{cursor:pointer;font-family:var(--f);border:none;background:none;color:inh
 .panel{display:none}.panel.on{display:block}
 
 /* ──────────────────────────────────────
-   LIVE CHANNELS
+   LIVE CHANNELS — retro TV bar
 ────────────────────────────────────── */
-.live-section{padding:14px 14px 12px;border-bottom:1px solid var(--b)}
-.sec-label{
-  font-size:9px;font-weight:900;color:var(--blue-l);
-  letter-spacing:2.5px;text-transform:uppercase;
-  margin-bottom:10px;opacity:.85;
+.live-section{
+  padding:14px 0 18px;
+  border-bottom:1px solid var(--b2);
+  background:
+    linear-gradient(180deg, rgba(26,115,232,.13) 0%, rgba(13,15,20,0) 100%),
+    linear-gradient(0deg, var(--s1) 0%, var(--bg) 100%);
+  position:relative;overflow:hidden;
 }
-.live-row{display:flex;gap:10px;overflow-x:auto;padding-bottom:2px}
+.live-section::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,transparent,var(--blue) 25%,var(--sky) 50%,var(--blue) 75%,transparent);
+  background-size:200% 100%;animation:shimmer 3s linear infinite;
+}
+.sec-label{
+  font-size:9px;font-weight:900;color:var(--sky);
+  letter-spacing:3px;text-transform:uppercase;
+  margin-bottom:14px;padding:0 14px;
+  display:flex;align-items:center;gap:8px;
+}
+.sec-label::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(56,189,248,.3),transparent)}
+
+/* scroll row — needs padding-top for antenna space */
+.live-row{
+  display:flex;gap:14px;overflow-x:auto;
+  padding:12px 14px 4px;
+}
+
+/* wrapper handles hover — NOT the card */
 .lc-wrap{
   display:flex;flex-direction:column;align-items:center;
-  gap:5px;flex-shrink:0;border:none;background:none;
+  gap:8px;flex-shrink:0;border:none;background:none;
   padding:0;cursor:pointer;
+  transition:transform .2s;
 }
+.lc-wrap:hover{transform:translateY(-3px)}
+.lc-wrap:active{transform:scale(.9) translateY(0)}
+
+/* ── RETRO TV OUTER SHELL ──
+   The trick: antenna lives on .lc-tv-shell (a wrapper div inside lc-wrap)
+   so it's NOT clipped by the card's overflow */
+.lc-tv-shell{
+  position:relative;
+  padding-top:10px;   /* space for antenna */
+  padding-bottom:8px; /* space for legs */
+}
+/* ANTENNA — two diagonal sticks */
+.lc-tv-shell::before{
+  content:'';
+  position:absolute;top:0;left:50%;
+  width:2px;height:10px;
+  background:var(--b3);
+  border-radius:2px;
+  transform:translateX(-6px) rotate(-20deg);
+  transform-origin:bottom center;
+  box-shadow:10px 0 0 var(--b3);
+}
+/* LEGS */
+.lc-tv-shell::after{
+  content:'';
+  position:absolute;bottom:0;left:50%;transform:translateX(-50%);
+  width:32px;height:7px;
+  border-left:3px solid var(--b3);
+  border-right:3px solid var(--b3);
+  border-bottom:2px solid var(--b3);
+  border-radius:0 0 4px 4px;
+}
+.lc-wrap:hover .lc-tv-shell::before{background:var(--sky);box-shadow:10px 0 0 var(--sky)}
+.lc-wrap:hover .lc-tv-shell::after{border-color:var(--sky)}
+
+/* THE TV SCREEN */
 .lc-card{
-  width:56px;height:56px;border-radius:15px;
-  border:1px solid var(--b2);background:var(--s1);
+  width:60px;height:54px;border-radius:12px;
+  border:2px solid var(--b2);
   display:flex;align-items:center;justify-content:center;
   position:relative;overflow:hidden;
-  box-shadow:var(--sh1);
-  transition:border-color .18s,box-shadow .18s;
+  box-shadow:var(--sh2), inset 0 1px 0 rgba(255,255,255,.06);
+  transition:border-color .2s,box-shadow .2s;
 }
-.lc-wrap:hover .lc-card{border-color:var(--blue-b);box-shadow:var(--sh-blue)}
-.lc-card[style*="background"]{
-  transition:transform .18s,box-shadow .18s;
+/* Scanline overlay */
+.lc-card::after{
+  content:'';position:absolute;inset:0;
+  background:repeating-linear-gradient(
+    0deg,
+    transparent,transparent 2px,
+    rgba(0,0,0,.12) 2px,rgba(0,0,0,.12) 3px
+  );
+  pointer-events:none;z-index:1;
 }
-.lc-card:active{transform:scale(.85)}
-.lc-card img{width:100%;height:100%;object-fit:cover;display:block}
-.lc-fallback{font-size:9px;font-weight:700;color:var(--t2);padding:2px;text-align:center}
+.lc-wrap:hover .lc-card{
+  border-color:var(--sky);
+  box-shadow:var(--sh2), 0 0 16px rgba(56,189,248,.3), inset 0 1px 0 rgba(255,255,255,.10);
+}
+.lc-card img{
+  width:80%;height:80%;object-fit:contain;display:block;
+  position:relative;z-index:2;
+}
+.lc-fallback{font-size:8px;font-weight:800;color:var(--t1);text-align:center;line-height:1.3;position:relative;z-index:2}
+
+/* LIVE dot */
 .lc-dot{
-  position:absolute;bottom:4px;right:4px;
+  position:absolute;bottom:5px;right:5px;z-index:3;
   width:6px;height:6px;border-radius:50%;
-  background:var(--green);border:1.5px solid var(--bg);
-  animation:blink 2.5s infinite;
+  background:var(--green);
+  border:1.5px solid rgba(0,0,0,.6);
+  box-shadow:0 0 6px var(--green);
+  animation:blink 2s infinite;
 }
-.lc-name{font-size:9px;font-weight:600;color:var(--t3);text-align:center;max-width:62px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc-name{
+  font-size:9px;font-weight:700;color:var(--t2);
+  text-align:center;max-width:70px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  letter-spacing:.3px;
+  margin-top:2px;
+}
 
 /* ──────────────────────────────────────
    STATUS + CHIPS
@@ -690,9 +770,30 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--sky);outline-offset
 .nb-badge{position:absolute;top:5px;right:7px;width:7px;height:7px;border-radius:50%;border:2px solid var(--bg);display:none}
 .nb-badge.alrt{background:var(--red);display:block;animation:blink .8s infinite}
 .nb-badge.ok{background:var(--green);display:block}
+
+/* ──────────────────────────────────────
+   PULL TO REFRESH
+────────────────────────────────────── */
+#ptr{
+  position:fixed;top:0;left:50%;transform:translateX(-50%) translateY(-60px);
+  width:40px;height:40px;border-radius:50%;
+  background:var(--blue);
+  display:flex;align-items:center;justify-content:center;
+  font-size:18px;z-index:9999;
+  box-shadow:0 4px 20px rgba(26,115,232,.5);
+  transition:transform .25s cubic-bezier(.34,1.4,.64,1),opacity .2s;
+  opacity:0;pointer-events:none;
+}
+#ptr.visible{opacity:1}
+#ptr.releasing{transform:translateX(-50%) translateY(52px)}
+#ptr.loading{transform:translateX(-50%) translateY(52px);animation:ptr-spin .8s linear infinite}
+@keyframes ptr-spin{to{transform:translateX(-50%) translateY(52px) rotate(360deg)}}
 </style>
 </head>
 <body>
+
+<!-- PULL TO REFRESH -->
+<div id="ptr">↻</div>
 
 <!-- ALERT OVERLAY -->
 <div id="ovl"><div class="ovl-box"><button class="ovl-close" onclick="closeOvl()">✕</button><div class="ovl-ico">🚨</div><div class="ovl-t">אזעקה!</div><div class="ovl-sub" id="ovl-type"></div><div class="ovl-areas" id="ovl-areas"></div><div class="ovl-warn">⚠️ היכנסו למרחב מוגן מיידית</div><button class="ovl-btn" onclick="closeOvl()">הבנתי — סגור</button></div></div>
@@ -731,12 +832,67 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--sky);outline-offset
   <div class="live-section">
     <div class="sec-label">📺 שידורים חיים</div>
     <div class="live-row">
-      <button class="lc-wrap" onclick="openLive('https://www.kan.org.il/live/','כאן 11')"><div class="lc-card" style="background:#020d1e"><img src="https://upload.wikimedia.org/wikipedia/he/thumb/7/77/Kan11_logo.svg/200px-Kan11_logo.svg.png" alt="כאן 11" style="padding:10px" onerror="this.outerHTML='<span class=lc-fallback>כאן 11</span>'"><div class="lc-dot"></div></div><span class="lc-name">כאן 11</span></button>
-      <button class="lc-wrap" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','חדשות 12')"><div class="lc-card" style="background:#0d0d0d"><img src="https://upload.wikimedia.org/wikipedia/he/thumb/e/e3/N12_Logo.svg/200px-N12_Logo.svg.png" alt="N12" style="padding:9px;filter:brightness(0) invert(1)" onerror="this.outerHTML='<span class=lc-fallback>N12</span>'"><div class="lc-dot"></div></div><span class="lc-name">חדשות 12</span></button>
-      <button class="lc-wrap" onclick="openLive('https://13tv.co.il/live/','רשת 13')"><div class="lc-card" style="background:#0b0015"><img src="https://upload.wikimedia.org/wikipedia/he/thumb/e/e2/Reshet_13_logo.svg/200px-Reshet_13_logo.svg.png" alt="רשת 13" style="padding:9px" onerror="this.outerHTML='<span class=lc-fallback>רשת 13</span>'"><div class="lc-dot"></div></div><span class="lc-name">רשת 13</span></button>
-      <button class="lc-wrap" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')"><div class="lc-card" style="background:#0f0800"><img src="https://upload.wikimedia.org/wikipedia/he/thumb/e/e2/Channel_14_Israel.svg/200px-Channel_14_Israel.svg.png" alt="ערוץ 14" style="padding:9px" onerror="this.outerHTML='<span class=lc-fallback>14</span>'"><div class="lc-dot"></div></div><span class="lc-name">ערוץ 14</span></button>
-      <a class="lc-wrap" href="https://glglz.maariv.co.il/" target="_blank" rel="noopener"><div class="lc-card" style="background:#0c051c"><img src="https://glglz.maariv.co.il/favicon.ico" alt="גלגלצ" style="padding:10px" onerror="this.outerHTML='<span class=lc-fallback>גלגלצ</span>'"><div class="lc-dot"></div></div><span class="lc-name">גלגלצ</span></a>
-      <a class="lc-wrap" href="https://www.103fm.co.il/" target="_blank" rel="noopener"><div class="lc-card" style="background:#050c18"><img src="https://www.103fm.co.il/favicon.ico" alt="גלץ" style="padding:9px" onerror="this.outerHTML='<span class=lc-fallback>גלץ</span>'"><div class="lc-dot"></div></div><span class="lc-name">גלץ 103</span></a>
+
+      <button class="lc-wrap" onclick="openLive('https://www.kan.org.il/live/','כאן 11')">
+        <div class="lc-tv-shell">
+          <div class="lc-card" style="background:linear-gradient(145deg,#021428,#0a2a50)">
+            <img src="https://upload.wikimedia.org/wikipedia/he/thumb/7/77/Kan11_logo.svg/200px-Kan11_logo.svg.png" alt="כאן 11" onerror="this.outerHTML='<span class=lc-fallback>כאן 11</span>'">
+            <div class="lc-dot"></div>
+          </div>
+        </div>
+        <span class="lc-name">כאן 11</span>
+      </button>
+
+      <button class="lc-wrap" onclick="openLive('https://www.mako.co.il/mako-vod-live-tv/Channel-12','חדשות 12')">
+        <div class="lc-tv-shell">
+          <div class="lc-card" style="background:linear-gradient(145deg,#280010,#440020)">
+            <img src="https://upload.wikimedia.org/wikipedia/he/thumb/e/e3/N12_Logo.svg/200px-N12_Logo.svg.png" alt="N12" style="filter:brightness(0) invert(1)" onerror="this.outerHTML='<span class=lc-fallback>N12</span>'">
+            <div class="lc-dot"></div>
+          </div>
+        </div>
+        <span class="lc-name">חדשות 12</span>
+      </button>
+
+      <button class="lc-wrap" onclick="openLive('https://13tv.co.il/live/','רשת 13')">
+        <div class="lc-tv-shell">
+          <div class="lc-card" style="background:linear-gradient(145deg,#14002a,#280050)">
+            <img src="https://upload.wikimedia.org/wikipedia/he/thumb/e/e2/Reshet_13_logo.svg/200px-Reshet_13_logo.svg.png" alt="רשת 13" onerror="this.outerHTML='<span class=lc-fallback>רשת 13</span>'">
+            <div class="lc-dot"></div>
+          </div>
+        </div>
+        <span class="lc-name">רשת 13</span>
+      </button>
+
+      <button class="lc-wrap" onclick="openLive('https://www.now14.co.il/live','ערוץ 14')">
+        <div class="lc-tv-shell">
+          <div class="lc-card" style="background:linear-gradient(145deg,#281400,#442400)">
+            <img src="https://upload.wikimedia.org/wikipedia/he/thumb/e/e2/Channel_14_Israel.svg/200px-Channel_14_Israel.svg.png" alt="ערוץ 14" onerror="this.outerHTML='<span class=lc-fallback>14</span>'">
+            <div class="lc-dot"></div>
+          </div>
+        </div>
+        <span class="lc-name">ערוץ 14</span>
+      </button>
+
+      <a class="lc-wrap" href="https://glglz.maariv.co.il/" target="_blank" rel="noopener">
+        <div class="lc-tv-shell">
+          <div class="lc-card" style="background:linear-gradient(145deg,#18082e,#2c1050)">
+            <img src="https://glglz.maariv.co.il/favicon.ico" alt="גלגלצ" style="border-radius:4px" onerror="this.outerHTML='<span class=lc-fallback>גלגלצ</span>'">
+            <div class="lc-dot"></div>
+          </div>
+        </div>
+        <span class="lc-name">גלגלצ</span>
+      </a>
+
+      <a class="lc-wrap" href="https://www.103fm.co.il/" target="_blank" rel="noopener">
+        <div class="lc-tv-shell">
+          <div class="lc-card" style="background:linear-gradient(145deg,#081428,#102240)">
+            <img src="https://www.103fm.co.il/favicon.ico" alt="גלץ" style="border-radius:4px" onerror="this.outerHTML='<span class=lc-fallback>גלץ</span>'">
+            <div class="lc-dot"></div>
+          </div>
+        </div>
+        <span class="lc-name">גלץ 103</span>
+      </a>
+
     </div>
   </div>
 
@@ -1733,6 +1889,38 @@ async function apLoadHistory(){
   if(el2)el2.innerHTML='<div class="ap-empty"><div class="ap-empty-ico">🕊️</div><div style="font-size:14px;font-weight:700;margin-bottom:4px">אין שיגורים לאחרונה</div><div style="font-size:11px;opacity:0.6">המערכת מחוברת ופעילה.<br>אירועים יופיעו כאן בזמן אמת.</div></div>';
 }
 // New UI is fed via patched setConn / triggerAlert / clearAlertUI
+
+
+// ── PULL TO REFRESH ──
+(function(){
+  let startY=0, pulling=false, threshold=72;
+  const el=document.getElementById('ptr');
+  document.addEventListener('touchstart',e=>{
+    if(window.scrollY===0) startY=e.touches[0].clientY;
+  },{passive:true});
+  document.addEventListener('touchmove',e=>{
+    if(!startY||window.scrollY>0) return;
+    const dy=e.touches[0].clientY-startY;
+    if(dy>10){
+      pulling=true;
+      el.classList.add('visible');
+      const prog=Math.min(dy/threshold,1);
+      el.style.transform=`translateX(-50%) translateY(${-60+prog*112}px) rotate(${prog*180}deg)`;
+    }
+  },{passive:true});
+  document.addEventListener('touchend',()=>{
+    if(!pulling){startY=0;return;}
+    pulling=false;startY=0;
+    el.style.transform='';
+    el.classList.add('releasing','loading');
+    el.textContent='↻';
+    loadNews(true).finally?.(()=>{
+      el.classList.remove('releasing','loading','visible');
+    });
+    // fallback cleanup
+    setTimeout(()=>el.classList.remove('releasing','loading','visible'),3000);
+  });
+})();
 
 loadNews(true);
 // Start alert panel in unavail, SSE will switch to live if server responds
