@@ -835,7 +835,7 @@ app.get('/api/alerts/oref-history', async (req, res) => {
 
 // ── PUSH SUBSCRIPTION ENDPOINTS ──
 app.get('/api/version', (req, res) => {
-  res.json({ version: '14', ts: Date.now() });
+  res.json({ version: '22', ts: Date.now() });
 });
 
 app.get('/api/push/status', (req, res) => {
