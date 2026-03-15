@@ -1173,12 +1173,12 @@ const CH={
 const NO_IMG=new Set([]);
 function goodImg(url,src){
   if(!url||url.length<12)return false;
-  // Only block if it's clearly a logo/placeholder filename
   const l=url.toLowerCase();
   const fname=l.split('/').pop().split('?')[0];
-  for(const b of ['mivzakim','placeholder','noimage','no-image','RenderImage'])if(l.includes(b))return false;
-  // Block only if filename itself is a logo
+  for(const b of ['mivzakim','placeholder','noimage','no-image','RenderImage','%D7%9E%D7%91%D7%96%D7%A7%D7%99%D7%9D'])if(l.includes(b))return false;
   if(fname.startsWith('logo')||fname.startsWith('brand')||fname==='favicon.ico')return false;
+  // Walla: block short numeric image paths (always logos)
+  if(l.includes('walla')&&l.includes('/image/')&&/\/image\/\d{5,9}/.test(l)&&url.length<100)return false;
   // Block tiny tracker images
   if(/[?&](w|width)=(1|2|5|10|16)(&|$)/.test(url))return false;
   return true;
