@@ -183,9 +183,9 @@ const CHANNELS = [
   { id:'glz',       name:'גלצ',          color:'#2d6a4f', icon:'🎖️', url:'https://news.google.com/rss/search?q=site:glz.co.il+when:1d&hl=he&gl=IL&ceid=IL:he', limit:4 },
   { id:'idf',       name:'דובר צבא',     color:'#16a34a', icon:'🪖', url:'https://news.google.com/rss/search?q=%D7%93%D7%95%D7%91%D7%A8+%D7%A6%D7%94%22%D7%9C+OR+%D7%A6%D7%91%D7%90+when:1d&hl=he&gl=IL&ceid=IL:he', limit:3 },
   { id:'srugim',    name:'סרוגים',        color:'#0891b2', icon:'✡️', url:'https://news.google.com/rss/search?q=site:srugim.co.il+when:1d&hl=he&gl=IL&ceid=IL:he', limit:3 },
-  { id:'calcalist', name:'כלכליסט',       color:'#0f4c8a', icon:'💼', url:'https://www.calcalist.co.il/GeneralRSS/0,15910,L-8,00.xml',                   limit:4 },
-  { id:'globes',    name:'גלובס',         color:'#006633', icon:'📊', url:'https://www.globes.co.il/webservice/rss/rssfeeder.asmx/FeederNode?iID=1',      limit:4 },
-  { id:'kan',       name:'כאן 11',        color:'#1a56db', icon:'📻', url:'https://www.kan.org.il/rss/rssFeeder.aspx?id=1',                               limit:4 },
+  { id:'calcalist', name:'כלכליסט',       color:'#0f4c8a', icon:'💼', url:'https://news.google.com/rss/search?q=site:calcalist.co.il+when:1d&hl=he&gl=IL&ceid=IL:he', limit:4 },
+  { id:'globes',    name:'גלובס',         color:'#006633', icon:'📊', url:'https://news.google.com/rss/search?q=site:globes.co.il+when:1d&hl=he&gl=IL&ceid=IL:he',    limit:4 },
+  { id:'kan',       name:'כאן 11',        color:'#1a56db', icon:'📻', url:'https://news.google.com/rss/search?q=site:kan.org.il+when:1d&hl=he&gl=IL&ceid=IL:he',      limit:4 },
 ];
 
 // No circuit breaker — simple timeout per channel handles failures
@@ -194,28 +194,33 @@ const CHANNELS = [
 const BAD_PATTERNS = [
   'mivzakim', 'placeholder', 'noimage', 'no-image',
   'RenderImage', 'walla.co.il/rb/', 'breaking_news',
-  // Walla breaking logo: img.walla.co.il/v2/image/... with specific logo IDs
-  '2907054','2907055','2907056','2907057','2907058','2907059', // known walla logo IDs
+  '%D7%9E%D7%91%D7%96%D7%A7%D7%99%D7%9D', // "מבזקים" URL-encoded
+  // Walla breaking logo IDs
+  '2907054','2907055','2907056','2907057','2907058','2907059',
 ];
 
-// Separate pattern: only block if URL ENDS with or IS a logo file
 const LOGO_PATTERNS = ['/logo.', '/logo-', '/brand.', '/favicon.', 'favicon.ico'];
 
-// Sources that NEVER have real images — skip image entirely
-const NO_IMAGE_SOURCES = new Set([]);
+// Sources where RSS images are often logos — apply extra strict filtering
+const STRICT_IMAGE_SOURCES = new Set(['walla', 'walla_w', 'walla_econ', 'maariv']);
 
 function isRealImage(url, sourceId) {
   if (!url || url.length < 12) return false;
-  if (sourceId && NO_IMAGE_SOURCES.has(sourceId)) return false;
   const l = url.toLowerCase();
   for (const p of BAD_PATTERNS) if (l.includes(p.toLowerCase())) return false;
-  // Logo check — more precise: only block if logo is in the filename, not deep in path
   for (const p of LOGO_PATTERNS) if (l.includes(p)) return false;
-  // Walla blue mivzakim logo check
-  if (url.includes('walla') && url.includes('/image/') && url.includes('2')) {
-    if (/\/image\/\d{7}/.test(url) && url.length < 80) return false;
+  // Walla: block ALL short image URLs (logos are short numeric paths)
+  if (l.includes('walla') && l.includes('/image/')) {
+    if (/\/image\/\d{5,9}/.test(l)) return false; // numeric-only = always logo
   }
-  // Block tiny images (1x1 trackers, spacers)
+  // Walla: block images with "mivzak" or blue logo patterns
+  if (l.includes('walla') && url.length < 100) return false;
+  // Maariv: their og:image and RSS images are the "חדשות מתפרצות" logo
+  if (l.includes('maariv') && (l.includes('mivzak') || l.includes('logo') || l.includes('brand') || l.includes('breaking'))) return false;
+  if (l.includes('maariv.co.il') && url.length < 90) return false;
+  // Strict sources: require long URL (real article images are long)
+  if (sourceId && STRICT_IMAGE_SOURCES.has(sourceId) && url.length < 80) return false;
+  // Block tiny tracker images
   if (/[?&](w|width)=(1|2|3|4|5|10|16|20)(&|$)/.test(url)) return false;
   return true;
 }
@@ -393,11 +398,7 @@ async function fetchChannel(ch) {
     }
     if (!feed || !feed.items) return [];
     return (feed.items || []).slice(0, ch.limit || 5).map((item, i) => {
-      let image = extractImage(item, ch.id);
-      // If RSS gave no image, check og:image cache from previous scrapes
-      if (!image && item.link && ogCache.has(item.link)) {
-        image = ogCache.get(item.link);
-      }
+      const image = extractImage(item, ch.id);
       return {
         id: ch.id + '_' + (item.guid || item.link || i),
         source: ch.id, sourceName: ch.name, sourceColor: ch.color, sourceIcon: ch.icon,
@@ -416,113 +417,6 @@ async function fetchChannel(ch) {
 }
 
 let newsCache = [], cacheTime = 0;
-
-// ── OG:IMAGE SCRAPER — fills missing images in background ──
-const ogCache = new Map(); // url → imageUrl (persists across refreshes)
-const OG_MAX_CACHE = 200;
-const OG_CONCURRENT = 5; // max parallel fetches
-const OG_TIMEOUT = 4000;
-
-async function scrapeOgImage(articleUrl) {
-  if (!articleUrl || ogCache.has(articleUrl)) return ogCache.get(articleUrl) || null;
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), OG_TIMEOUT);
-    const res = await fetch(articleUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept': 'text/html',
-        'Accept-Language': 'he-IL,he;q=0.9'
-      },
-      signal: controller.signal,
-      redirect: 'follow'
-    });
-    clearTimeout(timeout);
-    if (!res.ok) { ogCache.set(articleUrl, null); return null; }
-    // Read only first 30KB — og:image is always in <head>
-    const reader = res.body.getReader();
-    let html = '';
-    let bytesRead = 0;
-    const maxBytes = 30000;
-    while (bytesRead < maxBytes) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      html += new TextDecoder().decode(value, { stream: true });
-      bytesRead += value.length;
-    }
-    try { reader.cancel(); } catch(e) {}
-
-    // Extract og:image, twitter:image, or first large image
-    let img = null;
-    // Priority 1: og:image
-    const ogMatch = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']{20,})["']/i)
-                 || html.match(/<meta[^>]+content=["']([^"']{20,})["'][^>]+property=["']og:image["']/i);
-    if (ogMatch) img = ogMatch[1];
-    // Priority 2: twitter:image
-    if (!img) {
-      const twMatch = html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']{20,})["']/i)
-                   || html.match(/<meta[^>]+content=["']([^"']{20,})["'][^>]+name=["']twitter:image["']/i);
-      if (twMatch) img = twMatch[1];
-    }
-    // Priority 3: first large img in article
-    if (!img) {
-      const imgTags = [...html.matchAll(/<img[^>]+src=["']([^"']{30,})["']/gi)].map(m => m[1]);
-      for (const candidate of imgTags.slice(0, 5)) {
-        if (isRealImage(candidate, null) && !candidate.includes('avatar') && !candidate.includes('icon')) {
-          img = candidate;
-          break;
-        }
-      }
-    }
-    // Resolve relative URLs
-    if (img && !img.startsWith('http')) {
-      try {
-        const base = new URL(articleUrl);
-        img = new URL(img, base.origin).href;
-      } catch(e) {}
-    }
-    // Upgrade and cache
-    if (img && isRealImage(img, null)) {
-      img = upgradeImageUrl(img, null);
-      ogCache.set(articleUrl, img);
-      return img;
-    }
-    ogCache.set(articleUrl, null);
-    return null;
-  } catch(e) {
-    ogCache.set(articleUrl, null);
-    return null;
-  }
-}
-
-// Run in background: scrape og:image for items with no image
-async function fillMissingImages() {
-  const missing = newsCache.filter(item => !item.image && item.link);
-  if (!missing.length) return;
-  console.log(`[OG] Scraping ${missing.length} missing images...`);
-
-  // Process in batches of OG_CONCURRENT
-  for (let i = 0; i < missing.length; i += OG_CONCURRENT) {
-    const batch = missing.slice(i, i + OG_CONCURRENT);
-    const results = await Promise.allSettled(
-      batch.map(item => scrapeOgImage(item.link))
-    );
-    results.forEach((r, idx) => {
-      if (r.status === 'fulfilled' && r.value) {
-        batch[idx].image = r.value;
-      }
-    });
-  }
-
-  // Keep ogCache bounded
-  if (ogCache.size > OG_MAX_CACHE) {
-    const keys = [...ogCache.keys()];
-    keys.slice(0, 80).forEach(k => ogCache.delete(k));
-  }
-
-  const filled = missing.filter(i => i.image).length;
-  console.log(`[OG] Filled ${filled}/${missing.length} images`);
-}
 
 async function refreshNews() {
 
@@ -561,8 +455,6 @@ async function refreshNews() {
   checkAndPushNewItems(newsCache);
   // Send breaking to Telegram
   checkAndSendToTelegram(newsCache);
-  // Fill missing images in background (don't block response)
-  fillMissingImages().catch(e => console.log('[OG] Error:', e.message));
 }
 
 app.get('/api/news', async (req, res) => {
@@ -907,7 +799,6 @@ app.post('/api/push/unsubscribe', (req, res) => {
 app.get('/health', (req, res) => res.json({
   ok: true, items: newsCache.length, oref: orefConnected,
   sseClients: sseClients.size, pushSubs: pushSubscriptions.length,
-  ogCacheSize: ogCache.size,
   imagesTotal: newsCache.filter(i => i.image).length,
   imagesMissing: newsCache.filter(i => !i.image).length
 }));
@@ -930,7 +821,6 @@ setInterval(() => {
   if (mb > 420) {
     console.log('⚠️ MEM HIGH: clearing caches');
     summaryCache.clear();
-    ogCache.clear();
     newsCache = newsCache.slice(0, 10);
   }
 }, 5 * 60 * 1000);
@@ -1114,8 +1004,9 @@ function checkAndSendToTelegram(items) {
 }
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Port ${PORT}`);
-  refreshNews();
+app.listen(PORT, async () => {
+  console.log(`Port ${PORT} — v22 — ${CHANNELS.length} channels`);
+  await refreshNews();
+  console.log(`Ready: ${newsCache.length} items, ${newsCache.filter(i=>i.image).length} with images`);
   setInterval(refreshNews, 10000);
 });
