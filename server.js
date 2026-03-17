@@ -8,7 +8,7 @@ const compression = require('compression');
 // ══════════════════════════════════════════════
 // CONFIG & ENVIRONMENT
 // ══════════════════════════════════════════════
-const APP_VERSION = '23';
+const APP_VERSION = '24';
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
@@ -380,6 +380,90 @@ function upgradeImageUrl(url) {
 }
 
 // ══════════════════════════════════════════════
+// OG IMAGE SCRAPER — fallback when RSS has no image
+// ══════════════════════════════════════════════
+const ogImageCache = new Map(); // url -> { image, ts }
+const OG_CACHE_TTL = 30 * 60 * 1000; // 30 min
+const OG_CACHE_MAX = 200;
+const OG_SCRAPE_TIMEOUT = 4000;
+
+// Cleanup old OG cache entries periodically
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of ogImageCache) {
+    if (now - v.ts > OG_CACHE_TTL) ogImageCache.delete(k);
+  }
+}, 5 * 60 * 1000);
+
+async function scrapeOgImage(articleUrl) {
+  if (!articleUrl || articleUrl.length < 10) return null;
+  // Check cache
+  const cached = ogImageCache.get(articleUrl);
+  if (cached) return cached.image;
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), OG_SCRAPE_TIMEOUT);
+    const res = await fetch(articleUrl, {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        'Accept': 'text/html',
+      },
+      redirect: 'follow',
+    });
+    clearTimeout(timer);
+    if (!res.ok) return null;
+    // Read only the first 30KB to find meta tags (they're in <head>)
+    const reader = res.body.getReader();
+    let html = '';
+    const decoder = new TextDecoder();
+    while (html.length < 30000) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      html += decoder.decode(value, { stream: true });
+    }
+    try { reader.cancel(); } catch (e) {}
+
+    // Extract og:image, twitter:image, or first large image
+    const candidates = [];
+    // og:image (most reliable)
+    const ogMatch = html.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']{20,})["']/i)
+                 || html.match(/<meta[^>]*content=["']([^"']{20,})["'][^>]*property=["']og:image["']/i);
+    if (ogMatch) candidates.push(ogMatch[1]);
+    // twitter:image
+    const twMatch = html.match(/<meta[^>]*(?:name|property)=["']twitter:image["'][^>]*content=["']([^"']{20,})["']/i)
+                 || html.match(/<meta[^>]*content=["']([^"']{20,})["'][^>]*(?:name|property)=["']twitter:image["']/i);
+    if (twMatch) candidates.push(twMatch[1]);
+    // JSON-LD image
+    const ldMatch = html.match(/"image"\s*:\s*"(https?:\/\/[^"]{20,})"/i);
+    if (ldMatch) candidates.push(ldMatch[1]);
+
+    for (const url of candidates) {
+      // Resolve relative URLs
+      let fullUrl = url;
+      if (url.startsWith('//')) fullUrl = 'https:' + url;
+      else if (url.startsWith('/')) {
+        try { fullUrl = new URL(url, articleUrl).href; } catch (e) { continue; }
+      }
+      if (isRealImage(fullUrl)) {
+        const upgraded = upgradeImageUrl(fullUrl);
+        // Cache result
+        if (ogImageCache.size >= OG_CACHE_MAX) {
+          ogImageCache.delete(ogImageCache.keys().next().value);
+        }
+        ogImageCache.set(articleUrl, { image: upgraded, ts: Date.now() });
+        return upgraded;
+      }
+    }
+    // Cache null result to avoid re-scraping
+    ogImageCache.set(articleUrl, { image: null, ts: Date.now() });
+  } catch (e) {
+    // Timeout or network error — don't cache so we retry next cycle
+  }
+  return null;
+}
+
+// ══════════════════════════════════════════════
 // NEWS FETCHING
 // ══════════════════════════════════════════════
 function timeAgo(d) {
@@ -436,7 +520,7 @@ async function fetchChannel(ch) {
       ? await fetchWithProxy(ch.url)
       : await parser.parseURL(ch.url);
     if (!feed?.items) return [];
-    return feed.items.slice(0, ch.limit || 5).map((item, i) => ({
+    const mapped = feed.items.slice(0, ch.limit || 5).map((item, i) => ({
       id: ch.id + '_' + (item.guid || item.link || i),
       source: ch.id, sourceName: ch.name, sourceColor: ch.color, sourceIcon: ch.icon,
       title: (item.title || '').replace(/<[^>]+>/g, '').trim(),
@@ -446,6 +530,19 @@ async function fetchChannel(ch) {
       timeAgo: timeAgo(item.pubDate || item.isoDate),
       ts: new Date(item.pubDate || item.isoDate).getTime() || (Date.now() - i * 60000),
     }));
+    // OG scrape for items missing images (parallel, non-blocking)
+    const noImage = mapped.filter(m => !m.image && m.link);
+    if (noImage.length > 0) {
+      const scrapeResults = await Promise.allSettled(
+        noImage.map(m => scrapeOgImage(m.link))
+      );
+      scrapeResults.forEach((r, i) => {
+        if (r.status === 'fulfilled' && r.value) {
+          noImage[i].image = r.value;
+        }
+      });
+    }
+    return mapped;
   } catch (e) {
     console.log(`ERR ${ch.name}: ${e.message.slice(0, 60)}`);
     return [];
@@ -489,6 +586,74 @@ async function refreshNews() {
 app.get('/api/news', rateLimitMiddleware(), async (req, res) => {
   if (Date.now() - cacheTime > 60000) await refreshNews();
   res.json({ items: newsCache, updated: new Date(cacheTime).toISOString(), total: newsCache.length });
+});
+
+// ══════════════════════════════════════════════
+// API ROUTES — IMAGE PROXY
+// ══════════════════════════════════════════════
+const ALLOWED_IMAGE_HOSTS = new Set([
+  'maariv.co.il', 'www.maariv.co.il', 'images.maariv.co.il',
+  'n12.co.il', 'www.n12.co.il',
+  'ynet.co.il', 'www.ynet.co.il', 'pic.ynet.co.il',
+  'img.mako.co.il', 'www.mako.co.il',
+  'images.walla.co.il', 'img.walla.co.il',
+  'www.calcalist.co.il', 'images.calcalist.co.il',
+  'www.globes.co.il', 'images.globes.co.il',
+  'img.haaretz.co.il', 'www.haaretz.co.il',
+  'www.kan.org.il', 'kanapi.media.kan.org.il',
+  'images.now14.co.il', 'www.now14.co.il',
+  'images1.ynet.co.il', 'pic1.ynet.co.il', 'pic2.ynet.co.il',
+  '13tv.co.il', 'www.13tv.co.il', 'img.13tv.co.il',
+  'www.srugim.co.il', 'images.srugim.co.il',
+  'glz.co.il', 'www.glz.co.il',
+  'lh3.googleusercontent.com', 'news.google.com',
+]);
+
+function isAllowedImageHost(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    if (ALLOWED_IMAGE_HOSTS.has(hostname)) return true;
+    // Allow subdomains of allowed hosts
+    for (const h of ALLOWED_IMAGE_HOSTS) {
+      if (hostname.endsWith('.' + h)) return true;
+    }
+    return false;
+  } catch (e) { return false; }
+}
+
+app.get('/api/img-proxy', rateLimitMiddleware(), async (req, res) => {
+  const url = req.query.url;
+  if (!url || !url.startsWith('http')) return res.status(400).send('Bad URL');
+  if (!isAllowedImageHost(url)) return res.status(403).send('Host not allowed');
+
+  try {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 6000);
+    const imgRes = await fetch(url, {
+      signal: ctrl.signal,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+        'Accept': 'image/*',
+        'Referer': new URL(url).origin + '/',
+      },
+      redirect: 'follow',
+    });
+    clearTimeout(timer);
+    if (!imgRes.ok) return res.status(imgRes.status).send('Upstream error');
+
+    const ct = imgRes.headers.get('content-type') || 'image/jpeg';
+    if (!ct.startsWith('image/')) return res.status(400).send('Not an image');
+
+    res.set({
+      'Content-Type': ct,
+      'Cache-Control': 'public, max-age=86400, immutable',
+      'X-Content-Type-Options': 'nosniff',
+    });
+    const body = Buffer.from(await imgRes.arrayBuffer());
+    res.send(body);
+  } catch (e) {
+    res.status(502).send('Fetch failed');
+  }
 });
 
 // ══════════════════════════════════════════════
@@ -813,12 +978,15 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/api/debug/images', (req, res) => {
-  res.json(newsCache.map(item => ({
-    source: item.sourceName,
-    title: (item.title || '').slice(0, 50),
-    hasImage: !!item.image,
-    imageUrl: item.image ? item.image.slice(0, 80) + '...' : null,
-  })));
+  res.json({
+    ogCacheSize: ogImageCache.size,
+    stats: newsCache.map(item => ({
+      source: item.sourceName,
+      title: (item.title || '').slice(0, 50),
+      hasImage: !!item.image,
+      imageUrl: item.image ? item.image.slice(0, 120) : null,
+    })),
+  });
 });
 
 // ══════════════════════════════════════════════

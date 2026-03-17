@@ -11,6 +11,10 @@ function safeUrl(url){
   if(!url)return '#';
   try{const u=new URL(url);return['http:','https:'].includes(u.protocol)?url:'#';}catch(e){return '#';}
 }
+function proxyUrl(url){
+  if(!url||url.includes('/api/img-proxy'))return url;
+  return '/api/img-proxy?url='+encodeURIComponent(url);
+}
 
 // ── TOAST NOTIFICATIONS ──
 let _toastTimer=null;
@@ -254,8 +258,15 @@ function buildHero(item){
   const time=safeText(item.timeAgo||'');
   const isFresh = item.ts && (Date.now() - item.ts) < 15*60*1000;
   const badgeHtml = isFresh ? '<div class="hero-tags"><span class="hero-breaking">⚡ מבזק</span></div>' : '<div class="hero-tags"></div>';
-  // Fallback: if upgraded URL fails, try original
-  const fallbackJs = originalImg !== upgradedImg ? `onerror="if(!this.dataset.fell){this.dataset.fell=1;this.src='${safeUrl(originalImg)}';}else{this.closest('.hero-card').innerHTML='<div class=hero-text-card>${badgeHtml}<h2 class=hero-title-text>${title}</h2></div>';}"` : `onerror="this.closest('.hero-card').innerHTML='<div class=hero-text-card>${badgeHtml}<h2 class=hero-title-text>${title}</h2></div>';"`;
+  // Fallback chain: upgraded → original → proxy → text-only
+  const proxyImg = proxyUrl(originalImg);
+  const textFallback = `this.closest('.hero-card').innerHTML='<div class=hero-text-card>${badgeHtml}<h2 class=hero-title-text>${title}</h2></div>';`;
+  let fallbackJs;
+  if (originalImg !== upgradedImg) {
+    fallbackJs = `onerror="var f=parseInt(this.dataset.fell||0);this.dataset.fell=f+1;if(f===0){this.src='${safeUrl(originalImg)}';}else if(f===1){this.src='${proxyImg}';}else{${textFallback}}"`;
+  } else {
+    fallbackJs = `onerror="var f=parseInt(this.dataset.fell||0);this.dataset.fell=f+1;if(f===0){this.src='${proxyImg}';}else{${textFallback}}"`;
+  }
   if(hasImg){
     el.innerHTML=`<a class="hero-card" href="${link}" target="_blank" rel="noopener">
       <div class="hero-img-wrap">
@@ -456,7 +467,8 @@ function buildList(){
     const logoHtml = ch.logo
       ? '<img style="width:16px;height:16px;border-radius:5px;object-fit:contain;background:#fff;padding:1px;margin-left:5px;vertical-align:middle;flex-shrink:0" src="'+safeUrl(ch.logo)+'" onerror="this.remove()">'
       : '';
-    const imgHtml = hi ? '<div class="nc-img-wrap"><img class="nc-img" src="'+safeUrl(upgradedImg)+'" alt="" loading="lazy" onerror="if(this.dataset.fell){this.parentElement.remove();}else{this.dataset.fell=1;this.src=\''+safeUrl(item.image)+'\';}"></div>' : '';
+    const proxyImg = hi ? proxyUrl(item.image) : '';
+    const imgHtml = hi ? '<div class="nc-img-wrap"><img class="nc-img" src="'+safeUrl(upgradedImg)+'" alt="" loading="lazy" onerror="var f=parseInt(this.dataset.fell||0);this.dataset.fell=f+1;if(f===0){this.src=\''+safeUrl(item.image)+'\';}else if(f===1){this.src=\''+proxyImg+'\';}else{this.parentElement.remove();}"></div>' : '';
     a.innerHTML='<div class="nc-bar" style="background:'+ch.c+'"></div>'+imgHtml+
       '<div class="nc-body"><div class="nc-top"><span class="nc-src" style="background:'+ch.c+'18;color:'+ch.c+'">'+logoHtml+safeText(ch.n)+'</span><div class="nc-right"><span class="nc-time">'+safeText(item.timeAgo)+'</span>'+(isNew?'<span class="nc-new">חדש</span>':'')+'</div></div>'+
       '<div class="nc-title">'+safeText(item.title)+'</div>'+(item.desc?'<div class="nc-desc">'+safeText(item.desc)+'</div>':'')+
@@ -927,7 +939,7 @@ connectStream();
 pollOnce();
 
 // ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
-const CLIENT_VERSION = '23';
+const CLIENT_VERSION = '24';
 
 (function initAutoUpdate(){
   if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;
