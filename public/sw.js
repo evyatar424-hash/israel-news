@@ -1,6 +1,6 @@
 const APP_VERSION = '23';
 const CACHE = 'hdshot-il-v' + APP_VERSION;
-const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 // ── INSTALL: cache assets, skip waiting immediately ──
 self.addEventListener('install', e => {
