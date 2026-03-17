@@ -190,8 +190,13 @@ function goodImg(url,src){
   if(!url||url.length<12)return false;
   const l=url.toLowerCase();
   const fname=l.split('/').pop().split('?')[0];
-  for(const b of ['mivzakim','placeholder','noimage','no-image','RenderImage','%D7%9E%D7%91%D7%96%D7%A7%D7%99%D7%9D'])if(l.includes(b))return false;
+  for(const b of ['mivzakim','placeholder','noimage','no-image','RenderImage','%D7%9E%D7%91%D7%96%D7%A7%D7%99%D7%9D','breaking_news','breakingnews','default_image','default-image'])if(l.includes(b))return false;
   if(fname.startsWith('logo')||fname.startsWith('brand')||fname==='favicon.ico')return false;
+  // Maariv: block generic banner images
+  if(l.includes('maariv')){
+    for(const p of ['mivzak','logo','brand','breaking','default','mitparzot','generic','share_default','og-default','rss_image','rssimage','rssfeed'])if(l.includes(p))return false;
+    if(url.length<90)return false;
+  }
   // Walla: block short numeric image paths (always logos)
   if(l.includes('walla')&&l.includes('/image/')&&/\/image\/\d{5,9}/.test(l)&&url.length<100)return false;
   // Block tiny tracker images
@@ -839,11 +844,32 @@ async function subscribePush(silent){
     // Convert base64url to Uint8Array
     const vapidKey = urlBase64ToUint8Array(publicKey);
     let sub = await reg.pushManager.getSubscription();
+    // If existing subscription uses different VAPID key, unsubscribe first
+    if(sub){
+      try{
+        const subKey = sub.options && sub.options.applicationServerKey;
+        if(subKey){
+          const existingKey = btoa(String.fromCharCode(...new Uint8Array(subKey)))
+            .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+          if(existingKey !== publicKey){
+            console.log('[PUSH] VAPID key changed, re-subscribing...');
+            await sub.unsubscribe();
+            sub = null;
+          }
+        }
+      }catch(e){
+        // If we can't check, force re-subscribe
+        console.log('[PUSH] Cannot verify VAPID key, re-subscribing...');
+        try{ await sub.unsubscribe(); }catch(e2){}
+        sub = null;
+      }
+    }
     if(!sub){
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: vapidKey
       });
+      console.log('[PUSH] New push subscription created');
     }
     // Send subscription to server
     const subRes = await fetch('/api/push/subscribe', {
@@ -852,10 +878,13 @@ async function subscribePush(silent){
       body: JSON.stringify(sub.toJSON())
     });
     if(!subRes.ok){
-      if(!silent) showToast('⚠️ שגיאה ברישום לשרת');
+      const errData = await subRes.json().catch(()=>({}));
+      console.warn('[PUSH] Subscribe failed:', subRes.status, errData);
+      if(!silent) showToast('⚠️ שגיאה ברישום: '+(errData.error||subRes.status));
       return false;
     }
-    console.log('[PUSH] Subscription saved to server');
+    const result = await subRes.json();
+    console.log('[PUSH] Subscription saved to server, total:', result.total);
     ss('notif','granted');
     return true;
   }catch(e){

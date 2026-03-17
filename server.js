@@ -321,12 +321,21 @@ const CHANNELS = [
 // ══════════════════════════════════════════════
 const BAD_PATTERNS = [
   'mivzakim', 'placeholder', 'noimage', 'no-image',
-  'RenderImage', 'walla.co.il/rb/', 'breaking_news',
+  'RenderImage', 'walla.co.il/rb/', 'breaking_news', 'breakingnews',
   '%D7%9E%D7%91%D7%96%D7%A7%D7%99%D7%9D',
   '2907054', '2907055', '2907056', '2907057', '2907058', '2907059',
+  'default_image', 'default-image', 'generic_', 'generic-',
 ];
 const LOGO_PATTERNS = ['/logo.', '/logo-', '/brand.', '/favicon.', 'favicon.ico'];
 const STRICT_IMAGE_SOURCES = new Set(['walla', 'walla_w', 'walla_econ', 'maariv']);
+
+// Known generic/banner images per source (hash of URL patterns)
+const MAARIV_GENERIC_PATTERNS = [
+  'mivzak', 'logo', 'brand', 'breaking', 'default',
+  'mitparzot', 'hadashot-mitparzot', 'mivzakim',
+  'generic', 'share_default', 'og-default',
+  'rss_image', 'rssimage', 'rssfeed',
+];
 
 function isRealImage(url, sourceId) {
   if (!url || url.length < 12) return false;
@@ -335,8 +344,11 @@ function isRealImage(url, sourceId) {
   for (const p of LOGO_PATTERNS) if (l.includes(p)) return false;
   if (l.includes('walla') && l.includes('/image/') && /\/image\/\d{5,9}/.test(l)) return false;
   if (l.includes('walla') && url.length < 100) return false;
-  if (l.includes('maariv') && (l.includes('mivzak') || l.includes('logo') || l.includes('brand') || l.includes('breaking'))) return false;
-  if (l.includes('maariv.co.il') && url.length < 90) return false;
+  // Maariv: block generic/banner images
+  if (l.includes('maariv')) {
+    for (const p of MAARIV_GENERIC_PATTERNS) if (l.includes(p)) return false;
+    if (url.length < 90) return false;
+  }
   if (sourceId && STRICT_IMAGE_SOURCES.has(sourceId) && url.length < 80) return false;
   if (/[?&](w|width)=(1|2|3|4|5|10|16|20)(&|$)/.test(url)) return false;
   return true;
@@ -471,6 +483,11 @@ async function scrapeOgImage(articleUrl) {
     // JSON-LD image
     const ldMatch = html.match(/"image"\s*:\s*"(https?:\/\/[^"]{20,})"/i);
     if (ldMatch) candidates.push(ldMatch[1]);
+    // Content images — look for article images inside the body
+    const contentImgs = [...html.matchAll(/<img[^>]+src=["'](https?:\/\/[^"']{30,})["'][^>]*>/gi)]
+      .map(m => m[1])
+      .filter(u => !u.includes('icon') && !u.includes('avatar') && !u.includes('logo') && !u.includes('pixel'));
+    candidates.push(...contentImgs.slice(0, 3));
 
     for (const url of candidates) {
       // Resolve relative URLs
@@ -604,6 +621,24 @@ async function refreshNews() {
     if (seenTitles.has(key)) return false;
     seenTitles.add(key);
     return true;
+  });
+
+  // Detect generic/reused images: if same image URL appears 2+ times from same source, it's a generic banner
+  const imgCount = {};
+  combined.forEach(item => {
+    if (item.image) {
+      const key = item.source + '|' + item.image;
+      imgCount[key] = (imgCount[key] || 0) + 1;
+    }
+  });
+  combined.forEach(item => {
+    if (item.image) {
+      const key = item.source + '|' + item.image;
+      if (imgCount[key] >= 2) {
+        console.log(`[IMG] Removed generic image from ${item.sourceName}: ${item.image.slice(0, 60)}`);
+        item.image = null;
+      }
+    }
   });
 
   newsCache = combined.slice(0, 60);
