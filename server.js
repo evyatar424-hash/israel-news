@@ -57,10 +57,44 @@ function saveSubs() {
 // WEB PUSH (VAPID)
 // ══════════════════════════════════════════════
 let _webpush = null;
-if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+const VAPID_FILE = path.join(__dirname, 'vapid-keys.json');
+
+// Auto-generate VAPID keys if not provided via env vars
+let vapidPublic = VAPID_PUBLIC_KEY;
+let vapidPrivate = VAPID_PRIVATE_KEY;
+
+if (!vapidPublic || !vapidPrivate) {
+  // Try loading from persisted file
+  try {
+    if (fs.existsSync(VAPID_FILE)) {
+      const saved = JSON.parse(fs.readFileSync(VAPID_FILE, 'utf8'));
+      if (saved.publicKey && saved.privateKey) {
+        vapidPublic = saved.publicKey;
+        vapidPrivate = saved.privateKey;
+        console.log('VAPID keys loaded from file');
+      }
+    }
+  } catch (e) {}
+
+  // Generate new keys if still missing
+  if (!vapidPublic || !vapidPrivate) {
+    try {
+      const wp = require('web-push');
+      const keys = wp.generateVAPIDKeys();
+      vapidPublic = keys.publicKey;
+      vapidPrivate = keys.privateKey;
+      fs.writeFileSync(VAPID_FILE, JSON.stringify({ publicKey: vapidPublic, privateKey: vapidPrivate }));
+      console.log('VAPID keys generated and saved');
+    } catch (e) {
+      console.error('Failed to generate VAPID keys:', e.message);
+    }
+  }
+}
+
+if (vapidPublic && vapidPrivate) {
   try {
     _webpush = require('web-push');
-    _webpush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    _webpush.setVapidDetails(VAPID_SUBJECT, vapidPublic, vapidPrivate);
     console.log('web-push ✓');
   } catch (e) {
     console.error('web-push init failed:', e.message);
@@ -898,7 +932,7 @@ app.get('/api/version', (req, res) => {
 app.get('/api/push/status', (req, res) => {
   res.json({
     webpush: !!_webpush,
-    vapidSet: !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
+    vapidSet: !!(vapidPublic && vapidPrivate),
     subscribers: pushSubscriptions.length,
   });
 });
@@ -916,8 +950,8 @@ app.post('/api/push/test', rateLimitMiddleware(5), async (req, res) => {
 });
 
 app.get('/api/push/vapid-key', (req, res) => {
-  if (!VAPID_PUBLIC_KEY) return res.status(503).json({ error: 'VAPID not configured' });
-  res.json({ publicKey: VAPID_PUBLIC_KEY });
+  if (!vapidPublic) return res.status(503).json({ error: 'VAPID not configured' });
+  res.json({ publicKey: vapidPublic });
 });
 
 app.post('/api/push/subscribe', rateLimitMiddleware(30), (req, res) => {

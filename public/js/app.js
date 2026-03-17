@@ -67,7 +67,9 @@ const gs=k=>k in ST?ST[k]:DF[k];
 const ss=(k,v)=>{ST[k]=v;localStorage.setItem('iln10',JSON.stringify(ST));};
 ['sound','vib','auto'].forEach(k=>{if(gs(k))document.getElementById('tg-'+k)?.classList.add('on');});
 
-let items=[],cur='all',tiIdx=0,autoT=null,vol=0.8,lastKey='',alertOn=false,busy=false;
+let items=[],cur='all',tiIdx=0,autoT=null,vol=gs('vol')!=null?gs('vol'):0.8,lastKey='',alertOn=false,busy=false;
+// Restore volume slider
+(function(){const v=document.getElementById('vsl');if(v)v.value=Math.round(vol*100);})();
 
 // ── TOPIC FILTER ──
 const TOPIC_KEYS = {
@@ -149,6 +151,7 @@ function goTab(t){
   document.getElementById('t-'+t).classList.add('on');
   document.getElementById('nb-'+t).classList.add('on');
   if(t==='alerts') setTimeout(apLoadHistory, 200);
+  if(t==='settings') setTimeout(updateNotifStatus, 200);
 }
 
 function tog(k){const v=!gs(k);ss(k,v);const e=document.getElementById('tg-'+k);v?e.classList.add('on'):e.classList.remove('on');if(k==='auto')v?startAuto():stopAuto();}
@@ -579,11 +582,6 @@ function playAlarm(){
   }catch(e){}
 }
 function testAudio(){playAlarm();if(gs('vib')&&navigator.vibrate)navigator.vibrate([200,100,200]);}
-async function reqNotif(){
-  if(!('Notification'in window)){alert('הדפדפן לא תומך בהתראות');return;}
-  const p=await Notification.requestPermission();
-  alert(p==='granted'?'✅ התראות הופעלו!':'⚠️ אנא אשר הרשאה בהגדרות הדפדפן');
-}
 
 // Alert UI
 function triggerAlert(areas,type,key){
@@ -712,30 +710,75 @@ window.addEventListener('appinstalled',()=>{
 })();
 
 // ── NOTIFICATIONS ──
-function updateNotifStatus(){
+async function updateNotifStatus(){
   const btn=document.getElementById('notifBtn');
   const offBtn=document.getElementById('notifOffBtn');
-  if(!btn) return;
-  if('Notification'in window&&Notification.permission==='granted'){
-    if(offBtn)offBtn.style.display='inline-block';
-  } else {
-    if(offBtn)offBtn.style.display='none';
-  }
   const status=document.getElementById('notifStatus');
+  const pushStatus=document.getElementById('pushServerStatus');
+  if(!btn) return;
+
+  // Check browser support
   if(!('Notification' in window)){
     if(status)status.textContent='התראות לא נתמכות בדפדפן זה';
     if(btn)btn.style.display='none';
+    if(offBtn)offBtn.style.display='none';
     return;
   }
+
+  // Update based on browser permission
   if(Notification.permission==='granted'){
-    if(status)status.textContent='✅ התראות Push מופעלות — גם כשהאפליקציה סגורה';
+    if(offBtn)offBtn.style.display='inline-block';
     if(btn){btn.textContent='מופעל ✓';btn.style.background='var(--green)';btn.disabled=true;}
+    if(status)status.textContent='✅ התראות Push מופעלות';
   } else if(Notification.permission==='denied'){
-    if(status)status.textContent='❌ חסום — שנה בהגדרות הדפדפן';
+    if(offBtn)offBtn.style.display='none';
     if(btn){btn.textContent='חסום';btn.style.background='var(--t3)';btn.disabled=true;}
+    if(status)status.textContent='❌ חסום — שנה בהגדרות הדפדפן';
+    return;
+  } else {
+    if(offBtn)offBtn.style.display='none';
+    if(btn){btn.textContent='הפעל';btn.style.background='var(--blue)';btn.disabled=false;}
+    if(status)status.textContent='לחץ הפעל כדי לקבל התראות';
+    return;
+  }
+
+  // Check actual push subscription status with server
+  try{
+    const r=await fetch('/api/push/status');
+    const d=await r.json();
+    if(pushStatus){
+      if(!d.webpush){
+        pushStatus.textContent='⚠️ שרת Push לא מוגדר';
+        pushStatus.style.color='var(--orange,#e67e22)';
+      } else if(d.subscribers>0){
+        pushStatus.textContent='🟢 מחובר · '+d.subscribers+' מכשירים רשומים';
+        pushStatus.style.color='var(--green,#27ae60)';
+      } else {
+        pushStatus.textContent='⚠️ אין מכשירים רשומים — לחץ הפעל';
+        pushStatus.style.color='var(--orange,#e67e22)';
+      }
+    }
+    // If permission granted but not subscribed, auto-subscribe
+    if(d.webpush && Notification.permission==='granted'){
+      const hasSub = await checkPushSubscription();
+      if(!hasSub){
+        console.log('[PUSH] Permission granted but not subscribed, auto-subscribing...');
+        await subscribePush(true); // silent mode
+      }
+    }
+  }catch(e){
+    if(pushStatus){pushStatus.textContent='⚠️ לא ניתן לבדוק חיבור לשרת';pushStatus.style.color='var(--t3)';}
   }
 }
 
+async function checkPushSubscription(){
+  try{
+    if(!('serviceWorker' in navigator)||!('PushManager' in window)) return false;
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    return !!sub;
+  }catch(e){ return false; }
+}
 
 async function disableNotifications(){
   try{
@@ -752,29 +795,47 @@ async function disableNotifications(){
       }
     }
     ss('notif','');
-    updateNotifStatus();
-    alert('🔕 התראות בוטלו בהצלחה');
-  }catch(e){ alert('שגיאה: '+e.message); }
+    showToast('🔕 התראות בוטלו');
+    await updateNotifStatus();
+  }catch(e){ showToast('שגיאה: '+e.message); }
 }
 async function requestNotifications(){
-  if(!('Notification' in window))return;
-  if(!('Notification'in window)){updateNotifStatus();return;}
-  const perm = await Notification.requestPermission();
-  if(perm==='granted'){
-    await subscribePush();
-    updateNotifStatus();
-  } else {
-    updateNotifStatus();
+  if(!('Notification' in window)){showToast('הדפדפן לא תומך בהתראות');return;}
+  const btn=document.getElementById('notifBtn');
+  if(btn){btn.textContent='מפעיל...';btn.disabled=true;}
+  try{
+    const perm = await Notification.requestPermission();
+    if(perm==='granted'){
+      await subscribePush(false);
+      showToast('🔔 התראות הופעלו!');
+    } else {
+      showToast('⚠️ יש לאשר הרשאה בדפדפן');
+    }
+  }catch(e){
+    showToast('שגיאה: '+e.message);
   }
+  await updateNotifStatus();
 }
 
-async function subscribePush(){
+async function subscribePush(silent){
   try{
-    if(!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if(!('serviceWorker' in navigator) || !('PushManager' in window)){
+      if(!silent) showToast('הדפדפן לא תומך בהתראות Push');
+      return false;
+    }
     const reg = await navigator.serviceWorker.ready;
     // Get VAPID public key from server
     const keyRes = await fetch('/api/push/vapid-key');
+    if(!keyRes.ok){
+      console.warn('VAPID key not available:', keyRes.status);
+      if(!silent) showToast('⚠️ שרת התראות לא זמין');
+      return false;
+    }
     const { publicKey } = await keyRes.json();
+    if(!publicKey){
+      if(!silent) showToast('⚠️ מפתח Push לא מוגדר בשרת');
+      return false;
+    }
     // Convert base64url to Uint8Array
     const vapidKey = urlBase64ToUint8Array(publicKey);
     let sub = await reg.pushManager.getSubscription();
@@ -785,33 +846,35 @@ async function subscribePush(){
       });
     }
     // Send subscription to server
-    await fetch('/api/push/subscribe', {
+    const subRes = await fetch('/api/push/subscribe', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
       body: JSON.stringify(sub.toJSON())
     });
-    console.log('Push subscription saved');
-    // Send test push via server to verify end-to-end
-    try {
-      await fetch('/api/push/test', { method:'POST' });
-    } catch(e2) {}
+    if(!subRes.ok){
+      if(!silent) showToast('⚠️ שגיאה ברישום לשרת');
+      return false;
+    }
+    console.log('[PUSH] Subscription saved to server');
+    ss('notif','granted');
+    return true;
   }catch(e){
     console.warn('Push subscribe failed:', e.message);
-    // Fallback — still show browser notification
-    new Notification('חדשות IL 🔔',{
-      body:'התראות אזעקות מופעלות!',
-      icon:'/icon-192.png', dir:'rtl'
-    });
+    if(!silent) showToast('⚠️ '+e.message);
+    return false;
   }
 }
 
 async function testPush(){
+  const btn=document.querySelector('[onclick="testPush()"]');
+  if(btn){btn.textContent='📤 שולח...';btn.disabled=true;}
   try{
     const r = await fetch('/api/push/test',{method:'POST'});
     const d = await r.json();
-    if(d.ok) alert('✅ פוש נשלח ל-'+d.subscribers+' מנויים!');
-    else alert('⚠️ '+d.msg);
-  }catch(e){ alert('שגיאה: '+e.message); }
+    if(d.ok) showToast('✅ פוש נשלח ל-'+d.subscribers+' מכשירים');
+    else showToast('⚠️ '+(d.msg||d.error||'שגיאה'));
+  }catch(e){ showToast('שגיאה: '+e.message); }
+  if(btn){btn.textContent='📤 שלח פוש בדיקה';btn.disabled=false;}
 }
 
 function urlBase64ToUint8Array(base64String){
@@ -824,7 +887,7 @@ function urlBase64ToUint8Array(base64String){
 // Send notification when alert arrives
 function sendAlertNotif(cities, type){
   if(!('Notification'in window)||Notification.permission!=='granted')return;
-  const body = Array.isArray(cities) ? cities.slice(0,4).join('، ') : cities;
+  const body = Array.isArray(cities) ? cities.slice(0,4).join(' · ') : cities;
   new Notification('🚨 ' + (type||'ירי רקטות'),{
     body: body,
     icon:'/icon-192.png',
@@ -836,7 +899,7 @@ function sendAlertNotif(cities, type){
   });
 }
 
-document.addEventListener('DOMContentLoaded', updateNotifStatus);
+document.addEventListener('DOMContentLoaded', ()=>{ updateNotifStatus(); });
 // ── ALERT PANEL v2 JS ──
 function apSetLive(connected){
   const pulse=document.getElementById('ap-pulse'),label=document.getElementById('ap-live-label'),sub=document.getElementById('ap-live-sub'),badge=document.getElementById('ap-src-badge');
