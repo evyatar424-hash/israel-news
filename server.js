@@ -8,7 +8,7 @@ const compression = require('compression');
 // ══════════════════════════════════════════════
 // CONFIG & ENVIRONMENT
 // ══════════════════════════════════════════════
-const APP_VERSION = '24';
+const APP_VERSION = '25';
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
@@ -95,10 +95,12 @@ if (vapidPublic && vapidPrivate) {
   try {
     _webpush = require('web-push');
     _webpush.setVapidDetails(VAPID_SUBJECT, vapidPublic, vapidPrivate);
-    console.log('web-push ✓');
+    console.log('web-push ✓ | VAPID public key:', vapidPublic.slice(0, 20) + '...');
   } catch (e) {
     console.error('web-push init failed:', e.message);
   }
+} else {
+  console.warn('web-push ✗ | No VAPID keys available');
 }
 
 async function sendWebPush(subscription, payload) {
