@@ -1,15 +1,19 @@
 {
   "name": "israel-news",
-  "version": "1.0.0",
+  "version": "2.0.0",
+  "description": "אגרגטור חדשות ישראלי בזמן אמת עם התראות טילים",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
   },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "dependencies": {
+    "compression": "^1.7.4",
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "rss-parser": "^3.13.0",
-    "ws": "^8.14.2",
     "web-push": "^3.6.7"
   }
 }

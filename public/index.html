@@ -7,12 +7,24 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="חדשות IL">
+<meta name="description" content="חדשות IL — אגרגטור חדשות ישראלי בזמן אמת מ-17 ערוצים. כולל התראות טילים, סיכום AI, ומבזקים.">
+<meta property="og:title" content="חדשות IL — כל החדשות בזמן אמת">
+<meta property="og:description" content="אגרגטור חדשות ישראלי מ-17 ערוצים עם התראות טילים בזמן אמת">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/icon-512.png">
+<meta property="og:locale" content="he_IL">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="חדשות IL">
+<meta name="twitter:description" content="כל החדשות מכל הערוצים בזמן אמת">
 <link rel="manifest" href="/manifest.json">
 <link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-ES5DVG0SV7"></script>
 <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-ES5DVG0SV7');</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<title>חדשות IL</title>
+<title>חדשות IL — כל החדשות בזמן אמת</title>
 <style>
 /* ══════════════════════════════════════
    DESIGN TOKENS v22
@@ -965,8 +977,6 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--sky);outline-offset
     <div class="ap-hist" id="ap-hist-list"><div class="ap-empty"><div class="ap-empty-ico">🕊️</div>אין שיגורים לאחרונה</div></div>
     <a href="https://t.me/CumtaAlertsChannel" target="_blank" class="ap-tg"><div class="ap-tg-ico">✈️</div><div><div class="ap-tg-main">ערוץ טלגרם — כומתה</div><div class="ap-tg-sub">התראות צבע אדום בזמן אמת</div></div><div class="ap-tg-arr">›</div></a>
     <div class="ap-instr"><div class="ap-instr-head">מה לעשות באזעקה</div><div class="ap-instr-body"><div class="ap-instr-row"><span class="ap-instr-num">1️⃣</span><div class="ap-instr-txt"><strong>שמע אזעקה?</strong> רוץ מיידית למרחב המוגן הקרוב</div></div><div class="ap-instr-row"><span class="ap-instr-num">2️⃣</span><div class="ap-instr-txt"><strong>סגור דלתות וחלונות</strong> והישאר בפנים עד לסיום</div></div><div class="ap-instr-row"><span class="ap-instr-num">3️⃣</span><div class="ap-instr-txt"><strong>הישאר במרחב מוגן</strong> לפחות 10 דקות לאחר הסיום</div></div></div></div>
-    <div id="a-unavail" style="display:none"></div><div id="a-live-wrap" style="display:none"><div id="areas-list"></div><div id="hlist"></div></div>
-    <div id="a-main" style="display:none"></div><div id="a-ts" style="display:none"></div><div id="a-ind" style="display:none"></div><div id="a-sub-txt" style="display:none"></div><div id="alert-hist-list" style="display:none"></div>
   </div>
 </div>
 
@@ -1020,7 +1030,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--sky);outline-offset
       <div class="s-link-row"><div><div class="s-main">קבוצת WhatsApp</div><div class="s-sub">עדכונים בזמן אמת</div></div><a href="https://chat.whatsapp.com/GnpGSBF4V5gKZUDXlRmtDQ?mode=gi_t" target="_blank" style="font-size:20px">💬</a></div>
     </div>
 
-    <div class="s-footer">חדשות IL · v22<br>ynet · וואלה · כאן 11 · חדשות 12 · רשת 13 · ערוץ 14<br>מאקו · מעריב · הארץ · גלובס · כלכליסט · דובר צבא · גלצ</div>
+    <div class="s-footer">חדשות IL · v23<br>ynet · וואלה · כאן 11 · חדשות 12 · רשת 13 · ערוץ 14<br>מאקו · מעריב · הארץ · גלובס · כלכליסט · דובר צבא · גלצ</div>
   </div>
 </div>
 
@@ -1572,17 +1582,6 @@ function triggerAlert(areas,type,key){
   const str=Array.isArray(areas)?areas.map(a=>safeText(a)).join(' · '):safeText(String(areas));
   document.getElementById('bar-areas').textContent=str;
   document.getElementById('abar').classList.add('on');
-  document.getElementById('a-main').classList.add('alrt');
-  document.getElementById('a-ico').textContent='🚨';
-  document.getElementById('a-stat').textContent='אזעקה פעילה!';
-  document.getElementById('a-areas').textContent=str;
-  // Update areas-list display
-  const al=document.getElementById('areas-list');
-  if(al){
-    al.innerHTML=Array.isArray(areas)
-      ? areas.map(a=>'<span style="background:rgba(255,68,68,.15);border:1px solid rgba(255,68,68,.35);color:#ff9999;font-size:11px;font-weight:700;padding:4px 10px;border-radius:20px">'+safeText(a)+'</span>').join('')
-      : '<span style="color:#ff9999;font-size:12px;font-weight:700">'+safeText(str)+'</span>';
-  }
   document.getElementById('nb-dot').className='nb-badge alrt';
   document.getElementById('tdot').style.display='block';
   document.getElementById('ovl-areas').textContent=str;
@@ -1594,62 +1593,21 @@ function triggerAlert(areas,type,key){
     new Notification('🚨 '+type,{body:str,icon:'/icon-192.png',requireInteraction:true});
   histItems.unshift({data:Array.isArray(areas)?areas:[areas],title:type,alertDate:new Date().toISOString()});
   if(histItems.length>20)histItems.length=20;
-  renderHist();
-  // New UI
   apSetAlert({data:Array.isArray(areas)?areas:[areas],title:type});
 }
 function clearAlertUI(){
   if(!alertOn)return;alertOn=false;lastKey='';
   document.getElementById('abar').classList.remove('on');
-  document.getElementById('a-main').classList.remove('alrt');
-  document.getElementById('a-ico').textContent='✅';
-  document.getElementById('a-stat').textContent='אין אזעקות כרגע';
-  document.getElementById('a-areas').textContent='';
-  const al2=document.getElementById('areas-list');
-  if(al2) al2.innerHTML='<span style="font-size:12px;color:var(--t3)">אין אזעקות פעילות כרגע</span>';
   document.getElementById('nb-dot').className='nb-badge ok';
   document.getElementById('tdot').style.display='none';
-  // New UI
   apSetAlert(null);
 }
 function closeOvl(){document.getElementById('ovl').classList.remove('on');}
 
-function renderHist(){
-  const el=document.getElementById('hlist');
-  if(!histItems.length){el.innerHTML='<div style="font-size:11px;color:var(--t3);padding:4px 0;line-height:1.9">📡 ממתין לאזעקות מ-Tzofar.<br>אזעקות שיגיעו יופיעו כאן.</div>';return;}
-  el.innerHTML=histItems.map(a=>'<div class="hist-item"><div><div class="hist-c">'+(Array.isArray(a.data)?a.data.map(c=>safeText(c)).join(', '):safeText(a.cities||'—'))+'</div><div class="hist-ty">'+safeText(a.title||'')+'</div></div><div class="hist-t">'+(a.alertDate?new Date(a.alertDate).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}):'')+'</div></div>').join('');
-}
-
-// ── Alert panel state: unavail vs live ──
-let alertServerReachable = false;
+// ── Alert panel state ──
 let sseRetries = 0;
 
-function showAlertPanel(state){
-  // state: 'loading' | 'unavail' | 'live'
-  const u = document.getElementById('a-unavail');
-  const l = document.getElementById('a-live-wrap');
-  if(!u||!l) return;
-  if(state === 'unavail'){ u.style.display='block'; l.style.display='none'; }
-  else if(state === 'live'){ u.style.display='none'; l.style.display='block'; }
-  else { u.style.display='none'; l.style.display='none'; }
-}
-
 function setConn(s){
-  const e=document.getElementById('a-ind');
-  if(e) e.className='a-ind'+(s==='ok'?' ok':s==='alrt'?' alrt':'');
-  const sub=document.getElementById('a-sub-txt');
-  if(sub){
-    if(s==='ok') sub.textContent='מחובר — ממתין לאזעקות';
-    else if(s==='alrt') sub.textContent='⚠️ אזעקה פעילה!';
-    else sub.textContent='מחבר מחדש...';
-  }
-  const ts=document.getElementById('a-ts');
-  if(ts) ts.textContent=new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
-  if(s==='ok'||s==='alrt'){
-    alertServerReachable=true;
-    showAlertPanel('live');
-  }
-  // New UI
   apSetLive(s==='ok'||s==='alrt');
 }
 
@@ -1657,7 +1615,7 @@ function setConn(s){
 function connectStream(){
   try{
     const es=new EventSource('/api/alerts/stream');
-    const timeout=setTimeout(()=>{ es.close(); showAlertPanel('unavail'); setTimeout(connectStream,12000); },8000);
+    const timeout=setTimeout(()=>{ es.close(); setTimeout(connectStream,12000); },8000);
     es.onopen=()=>{
       clearTimeout(timeout);
       sseRetries=0;
@@ -1682,11 +1640,9 @@ function connectStream(){
       sseRetries++;
       setConn('err');
       es.close();
-      if(sseRetries >= 2) showAlertPanel('unavail');
       setTimeout(connectStream, Math.min(8000*sseRetries,30000));
     };
   }catch(e){
-    showAlertPanel('unavail');
     setTimeout(connectStream,15000);
   }
 }
@@ -1703,62 +1659,8 @@ function pollOnce(){
     }).catch(()=>{ /* SSE handles state */ });
 }
 
-// ── ALERT HISTORY from oref ──
-async function loadAlertHistory() {
-  const el = document.getElementById('alert-hist-list');
-  const sub = document.getElementById('a-sub-txt');
-  if (!el) return;
-  try {
-    // Try our server first (it has local history from WebSocket)
-    const r = await fetch('/api/alerts/history');
-    const data = await r.json();
-    if (Array.isArray(data) && data.length > 0) {
-      renderAlertHistory(data);
-      if(sub) sub.textContent = `${data.length} אירועים אחרונים`;
-      return;
-    }
-  } catch(e) {}
-  // Fallback: oref history API via our proxy
-  try {
-    const r2 = await fetch('/api/alerts/oref-history');
-    const data2 = await r2.json();
-    if (data2 && data2.length > 0) {
-      renderAlertHistory(data2);
-      if(sub) sub.textContent = `${data2.length} אירועים מפיקוד העורף`;
-      return;
-    }
-  } catch(e2) {}
-  if(el) el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--t3);font-size:12px">אין נתוני שיגורים כרגע</div>';
-}
-
-function renderAlertHistory(items) {
-  const el = document.getElementById('alert-hist-list');
-  if (!el || !items.length) return;
-  el.innerHTML = items.slice(0, 30).map(item => {
-    const cities = Array.isArray(item.data) ? item.data : (item.cities || []);
-    const cityStr = cities.slice(0, 4).join('، ');
-    const extra = cities.length > 4 ? ` +${cities.length - 4}` : '';
-    const timeStr = item.alertDate ? new Date(item.alertDate).toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'}) : '';
-    const dateStr = item.alertDate ? new Date(item.alertDate).toLocaleDateString('he-IL', {day:'numeric',month:'numeric'}) : '';
-    const type = item.title || 'ירי רקטות';
-    return `<div class="hist-item" style="flex-direction:column;align-items:flex-start;gap:5px">
-      <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
-        <span style="font-size:11px;font-weight:800;color:var(--cr)">🚨 ${safeText(type)}</span>
-        <span style="font-size:10px;color:var(--t3)">${dateStr} ${timeStr}</span>
-      </div>
-      <div style="font-size:12px;color:var(--t2);line-height:1.5">${safeText(cityStr)}${extra}</div>
-    </div>`;
-  }).join('');
-}
-
-// Load on tab switch
 document.addEventListener('DOMContentLoaded', () => {
   updateNotifStatus();
-  document.querySelectorAll('.tab').forEach(t => {
-    t.addEventListener('click', () => {
-      if (t.dataset.tab === 'alerts') loadAlertHistory();
-    });
-  });
 });
 
 
@@ -2023,13 +1925,11 @@ async function apLoadHistory(){
 })();
 
 loadNews(true);
-// Start alert panel in unavail, SSE will switch to live if server responds
-showAlertPanel('unavail');
 connectStream();
 pollOnce();
 
 // ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
-const CLIENT_VERSION = '22';
+const CLIENT_VERSION = '23';
 
 (function initAutoUpdate(){
   if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;

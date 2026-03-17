@@ -1,0 +1,5 @@
+node_modules/
+push-subs.json
+.env
+*.log
+.DS_Store
