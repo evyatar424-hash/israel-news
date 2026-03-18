@@ -1,6 +1,6 @@
-const APP_VERSION = '22';
+const APP_VERSION = '25';
 const CACHE = 'hdshot-il-v' + APP_VERSION;
-const ASSETS = ['/', '/index.html', '/manifest.json', '/icon-192.png', '/icon-512.png'];
+const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
 // ── INSTALL: cache assets, skip waiting immediately ──
 self.addEventListener('install', e => {
@@ -38,7 +38,24 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
   const url = e.request.url;
-  if (url.includes('/api/') || url.includes('/health')) return;
+  if (url.includes('/api/') || url.includes('/health')) {
+    // Cache image proxy responses for performance
+    if (url.includes('/api/img-proxy')) {
+      e.respondWith(
+        caches.match(e.request).then(cached => {
+          if (cached) return cached;
+          return fetch(e.request).then(res => {
+            if (res.ok) {
+              const clone = res.clone();
+              caches.open(CACHE).then(c => c.put(e.request, clone));
+            }
+            return res;
+          }).catch(() => new Response('', { status: 502 }));
+        })
+      );
+    }
+    return;
+  }
 
   if (url.endsWith('/') || url.includes('index.html') || url.includes('.html')) {
     e.respondWith(
