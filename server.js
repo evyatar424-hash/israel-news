@@ -8,7 +8,7 @@ const compression = require('compression');
 // ══════════════════════════════════════════════
 // CONFIG & ENVIRONMENT
 // ══════════════════════════════════════════════
-const APP_VERSION = '25';
+const APP_VERSION = '30';
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
@@ -104,12 +104,14 @@ if (vapidPublic && vapidPrivate) {
 }
 
 async function sendWebPush(subscription, payload) {
-  if (!_webpush) return false;
+  if (!_webpush) { console.warn('[PUSH] web-push not initialized'); return false; }
   try {
     await _webpush.sendNotification(subscription, JSON.stringify(payload));
     return true;
   } catch (e) {
+    console.warn(`[PUSH] Send failed (${e.statusCode || e.code || 'unknown'}): ${e.message?.slice(0, 80)}`);
     if (e.statusCode === 410 || e.statusCode === 404) {
+      console.log('[PUSH] Removing expired subscription:', subscription.endpoint.slice(0, 50));
       pushSubscriptions = pushSubscriptions.filter(s => s.endpoint !== subscription.endpoint);
       saveSubs();
     }
@@ -975,15 +977,23 @@ app.get('/api/push/status', (req, res) => {
 });
 
 app.post('/api/push/test', rateLimitMiddleware(5), async (req, res) => {
-  if (!pushSubscriptions.length) return res.json({ ok: false, msg: 'אין מנויים' });
-  await broadcastNewsPush({
-    id: 'test-' + Date.now(),
-    title: 'בדיקת פוש — חדשות IL עובד!',
-    sourceName: 'חדשות IL',
-    link: '/',
-    image: '/icon-192.png',
-  });
-  res.json({ ok: true, subscribers: pushSubscriptions.length });
+  if (!_webpush) return res.json({ ok: false, msg: 'שרת Push לא מוגדר (VAPID חסר)' });
+  if (!pushSubscriptions.length) return res.json({ ok: false, msg: 'אין מנויים רשומים. לחץ "הפעל" קודם.' });
+  const payload = {
+    title: '🔔 בדיקת התראות',
+    body: 'חדשות IL — ההתראות עובדות!',
+    icon: '/icon-192.png',
+    badge: '/icon-192.png',
+    data: { url: '/' },
+    tag: 'test-' + Date.now(),
+    renotify: true,
+  };
+  const results = await Promise.allSettled(pushSubscriptions.map(s => sendWebPush(s, payload)));
+  const ok = results.filter(r => r.status === 'fulfilled' && r.value).length;
+  const failed = results.length - ok;
+  console.log(`[PUSH TEST] Sent: ${ok}/${results.length}, Failed: ${failed}`);
+  if (ok === 0) return res.json({ ok: false, msg: `שליחה נכשלה ל-${results.length} מנויים. נסה לכבות ולהפעיל מחדש.` });
+  res.json({ ok: true, subscribers: ok, total: results.length });
 });
 
 app.get('/api/push/vapid-key', (req, res) => {
@@ -993,6 +1003,7 @@ app.get('/api/push/vapid-key', (req, res) => {
 
 app.post('/api/push/subscribe', rateLimitMiddleware(30), (req, res) => {
   const sub = req.body;
+  console.log('[PUSH] Subscribe request received:', JSON.stringify(sub).slice(0, 120));
 
   // Validate subscription structure
   if (!sub || typeof sub !== 'object') return res.status(400).json({ error: 'Invalid subscription' });
@@ -1003,21 +1014,27 @@ app.post('/api/push/subscribe', rateLimitMiddleware(30), (req, res) => {
   // Validate endpoint is a valid URL
   try { new URL(sub.endpoint); } catch (e) { return res.status(400).json({ error: 'Invalid endpoint URL' }); }
 
+  if (!_webpush) {
+    console.warn('[PUSH] Subscription received but web-push not initialized');
+    return res.status(503).json({ error: 'Push server not ready' });
+  }
+
   // Check max subscriptions
   if (pushSubscriptions.length >= MAX_SUBSCRIPTIONS) {
-    // Remove oldest subscription to make room
     pushSubscriptions.shift();
   }
 
-  const exists = pushSubscriptions.find(s => s.endpoint === sub.endpoint);
-  if (!exists) {
-    pushSubscriptions.push({
-      endpoint: sub.endpoint,
-      keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth },
-    });
-    saveSubs();
-    console.log(`[PUSH] New subscription. Total: ${pushSubscriptions.length}`);
+  // Update existing or add new
+  const idx = pushSubscriptions.findIndex(s => s.endpoint === sub.endpoint);
+  const subObj = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
+  if (idx >= 0) {
+    pushSubscriptions[idx] = subObj;
+    console.log(`[PUSH] Updated existing subscription. Total: ${pushSubscriptions.length}`);
+  } else {
+    pushSubscriptions.push(subObj);
+    console.log(`[PUSH] New subscription added. Total: ${pushSubscriptions.length}`);
   }
+  saveSubs();
   res.json({ ok: true, total: pushSubscriptions.length });
 });
 
@@ -1247,7 +1264,7 @@ app.listen(PORT, async () => {
   console.log(`[START] Ready: ${newsCache.length} items, ${newsCache.filter(i => i.image).length} with images`);
 
   // Start periodic refreshes
-  setInterval(refreshNews, 10_000);
+  setInterval(refreshNews, 120_000);
 
   // Start Oref polling
   pollOref();

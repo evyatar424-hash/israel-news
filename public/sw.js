@@ -1,4 +1,4 @@
-const APP_VERSION = '25';
+const APP_VERSION = '30';
 const CACHE = 'hdshot-il-v' + APP_VERSION;
 const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
@@ -97,25 +97,31 @@ self.addEventListener('message', e => {
 // ── PUSH NOTIFICATIONS ──
 self.addEventListener('push', e => {
   let data = {};
-  try { data = e.data ? e.data.json() : {}; } catch(err) {}
+  try { data = e.data ? e.data.json() : {}; } catch(err) {
+    console.warn('[SW] Failed to parse push data:', err);
+  }
+  console.log('[SW] Push received:', JSON.stringify(data).slice(0, 100));
   const title = data.title || '🚨 אזעקה';
   const options = {
     body: data.body || 'אזעקה פעילה',
     icon: data.icon || '/icon-192.png',
     badge: data.badge || '/icon-192.png',
     image: data.image || undefined,
-    vibrate: data.vibrate || [300, 100, 300],
+    vibrate: data.vibrate || [200, 80, 200],
     requireInteraction: data.requireInteraction || false,
+    silent: false,
     dir: 'rtl', lang: 'he',
     tag: data.tag || 'news',
-    renotify: data.renotify !== false,
-    data: data.data || { url: '/' }
+    renotify: true,
+    data: data.data || { url: '/' },
+    actions: data.requireInteraction ? [{ action: 'open', title: 'פתח' }, { action: 'dismiss', title: 'סגור' }] : undefined
   };
   e.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  if (e.action === 'dismiss') return;
   const url = (e.notification.data && e.notification.data.url) || '/';
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {

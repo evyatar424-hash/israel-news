@@ -553,40 +553,56 @@ async function loadNews(manual=false){
   if(manual){btn.disabled=false;btn.innerHTML='⟳ רענן';}
   busy=false;
 }
-function startAuto(){setRefreshInterval(30000);}
+function startAuto(){setRefreshInterval(120000);}
 function setRefreshInterval(ms){
   stopAuto();
   const lbl=document.getElementById('interval-lbl');
   const sel=document.getElementById('interval-sel');
   if(!ms){if(lbl)lbl.textContent='כבוי';return;}
   if(sel)sel.value=ms;
-  const labels={10000:'כל 10 שניות',20000:'כל 20 שניות',30000:'כל 30 שניות',60000:'כל דקה',120000:'כל 2 דקות',180000:'כל 3 דקות'};
+  const labels={60000:'כל דקה',120000:'כל 2 דקות',180000:'כל 3 דקות',300000:'כל 5 דקות'};
   if(lbl)lbl.textContent=labels[ms]||'רענון אוטומטי';
   autoT=setInterval(()=>loadNews(),ms);
   ss('refreshInterval',ms);
 }
 // Restore saved interval
-const _savedInterval=parseInt(gs('refreshInterval')||30000);
+const _savedInterval=parseInt(gs('refreshInterval')||120000);
 if(_savedInterval>0)setRefreshInterval(_savedInterval);
 function stopAuto(){if(autoT){clearInterval(autoT);autoT=null;}}
 startAuto();
 
-// Sound
-function playAlarm(){
+// Sound — pleasant chime for news, urgent for alerts
+function playChime(urgent){
   if(!gs('sound'))return;
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
-    [[440,.14],[880,.14],[440,.14],[880,.14],[440,.14],[880,.14]].forEach(([f,d],i)=>{
-      const o=ctx.createOscillator(),g=ctx.createGain();
-      o.connect(g);g.connect(ctx.destination);
-      o.type='sawtooth';o.frequency.value=f;
-      const t=ctx.currentTime+i*.2;
-      g.gain.setValueAtTime(vol*.45,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
-      o.start(t);o.stop(t+d);
-    });
+    if(urgent){
+      // Alert: firm but not harsh — two-tone rising
+      [[523,.12],[659,.12],[784,.18]].forEach(([f,d],i)=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=f;
+        const t=ctx.currentTime+i*.15;
+        g.gain.setValueAtTime(vol*.35,t);
+        g.gain.exponentialRampToValueAtTime(.001,t+d);
+        o.start(t);o.stop(t+d+.05);
+      });
+    } else {
+      // News chime: soft two-note bell (C5-E5)
+      [[523,.15],[659,.2]].forEach(([f,d],i)=>{
+        const o=ctx.createOscillator(),g=ctx.createGain();
+        o.connect(g);g.connect(ctx.destination);
+        o.type='sine';o.frequency.value=f;
+        const t=ctx.currentTime+i*.18;
+        g.gain.setValueAtTime(vol*.25,t);
+        g.gain.exponentialRampToValueAtTime(.001,t+d);
+        o.start(t);o.stop(t+d+.05);
+      });
+    }
   }catch(e){}
 }
-function testAudio(){playAlarm();if(gs('vib')&&navigator.vibrate)navigator.vibrate([200,100,200]);}
+function playAlarm(){ playChime(true); }
+function testAudio(){playChime(false);if(gs('vib')&&navigator.vibrate)navigator.vibrate([150,80,150]);}
 
 // Alert UI
 function triggerAlert(areas,type,key){
@@ -624,18 +640,21 @@ function setConn(s){
   apSetLive(s==='ok'||s==='alrt');
 }
 
-// SSE stream
+// SSE stream — stable reconnection
+let _es = null;
 function connectStream(){
+  if(_es){ try{_es.close();}catch(e){} _es=null; }
   try{
-    const es=new EventSource('/api/alerts/stream');
-    const timeout=setTimeout(()=>{ es.close(); setTimeout(connectStream,12000); },8000);
-    es.onopen=()=>{
+    _es=new EventSource('/api/alerts/stream');
+    const timeout=setTimeout(()=>{ if(_es){_es.close();_es=null;} setTimeout(connectStream,10000); },10000);
+    _es.onopen=()=>{
       clearTimeout(timeout);
       sseRetries=0;
       setConn('ok');
       apLoadHistory();
+      console.log('[SSE] Connected');
     };
-    es.onmessage=e=>{
+    _es.onmessage=e=>{
       clearTimeout(timeout);
       try{
         const d=JSON.parse(e.data);
@@ -648,17 +667,26 @@ function connectStream(){
         }
       }catch(err){}
     };
-    es.onerror=()=>{
+    _es.onerror=()=>{
       clearTimeout(timeout);
       sseRetries++;
       setConn('err');
-      es.close();
-      setTimeout(connectStream, Math.min(8000*sseRetries,30000));
+      if(_es){_es.close();_es=null;}
+      const delay=Math.min(3000*Math.pow(1.5,sseRetries),30000);
+      console.log('[SSE] Reconnecting in',Math.round(delay/1000)+'s');
+      setTimeout(connectStream, delay);
     };
   }catch(e){
-    setTimeout(connectStream,15000);
+    setTimeout(connectStream,10000);
   }
 }
+// Reconnect SSE on visibility change
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible' && (!_es || _es.readyState===2)){
+    sseRetries=0;
+    connectStream();
+  }
+});
 
 function pollOnce(){
   fetch('/api/alerts')
@@ -754,22 +782,28 @@ async function updateNotifStatus(){
     if(pushStatus){
       if(!d.webpush){
         pushStatus.textContent='⚠️ שרת Push לא מוגדר';
-        pushStatus.style.color='var(--orange,#e67e22)';
+        pushStatus.style.color='var(--red)';
       } else if(d.subscribers>0){
         pushStatus.textContent='🟢 מחובר · '+d.subscribers+' מכשירים רשומים';
-        pushStatus.style.color='var(--green,#27ae60)';
+        pushStatus.style.color='var(--green)';
       } else {
-        pushStatus.textContent='⚠️ אין מכשירים רשומים — לחץ הפעל';
-        pushStatus.style.color='var(--orange,#e67e22)';
+        pushStatus.textContent='⚠️ אין מכשירים רשומים';
+        pushStatus.style.color='var(--red)';
       }
     }
-    // If permission granted but not subscribed, auto-subscribe
+    // If permission granted, always ensure subscription is current
     if(d.webpush && Notification.permission==='granted'){
-      const hasSub = await checkPushSubscription();
-      if(!hasSub){
-        console.log('[PUSH] Permission granted but not subscribed, auto-subscribing...');
-        await subscribePush(true); // silent mode
-      }
+      console.log('[PUSH] Permission granted, ensuring subscription is current...');
+      await subscribePush(true); // silent re-subscribe
+      // Re-check status after subscribe
+      try{
+        const r2=await fetch('/api/push/status');
+        const d2=await r2.json();
+        if(pushStatus && d2.subscribers>0){
+          pushStatus.textContent='🟢 מחובר · '+d2.subscribers+' מכשירים רשומים';
+          pushStatus.style.color='var(--green)';
+        }
+      }catch(e){}
     }
   }catch(e){
     if(pushStatus){pushStatus.textContent='⚠️ לא ניתן לבדוק חיבור לשרת';pushStatus.style.color='var(--t3)';}
@@ -806,17 +840,22 @@ async function disableNotifications(){
 }
 async function requestNotifications(){
   if(!('Notification' in window)){showToast('הדפדפן לא תומך בהתראות');return;}
+  if(!('serviceWorker' in navigator)){showToast('הדפדפן לא תומך ב-Service Worker');return;}
   const btn=document.getElementById('notifBtn');
   if(btn){btn.textContent='מפעיל...';btn.disabled=true;}
   try{
+    // Make sure SW is registered first
+    await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
     const perm = await Notification.requestPermission();
     if(perm==='granted'){
-      await subscribePush(false);
-      showToast('🔔 התראות הופעלו!');
+      const ok = await subscribePush(false);
+      if(ok) showToast('🔔 התראות הופעלו!');
+      else showToast('⚠️ הרשמה נכשלה — נסה שוב');
     } else {
       showToast('⚠️ יש לאשר הרשאה בדפדפן');
     }
   }catch(e){
+    console.error('[PUSH] requestNotifications error:', e);
     showToast('שגיאה: '+e.message);
   }
   await updateNotifStatus();
@@ -829,10 +868,12 @@ async function subscribePush(silent){
       return false;
     }
     const reg = await navigator.serviceWorker.ready;
+    console.log('[PUSH] SW ready, fetching VAPID key...');
+
     // Get VAPID public key from server
     const keyRes = await fetch('/api/push/vapid-key');
     if(!keyRes.ok){
-      console.warn('VAPID key not available:', keyRes.status);
+      console.warn('[PUSH] VAPID key not available:', keyRes.status);
       if(!silent) showToast('⚠️ שרת התראות לא זמין');
       return false;
     }
@@ -841,54 +882,46 @@ async function subscribePush(silent){
       if(!silent) showToast('⚠️ מפתח Push לא מוגדר בשרת');
       return false;
     }
+    console.log('[PUSH] VAPID key received:', publicKey.slice(0, 20) + '...');
+
     // Convert base64url to Uint8Array
     const vapidKey = urlBase64ToUint8Array(publicKey);
+
+    // Always clear old subscription and create fresh one
+    // This ensures VAPID key mismatches never happen
     let sub = await reg.pushManager.getSubscription();
-    // If existing subscription uses different VAPID key, unsubscribe first
     if(sub){
-      try{
-        const subKey = sub.options && sub.options.applicationServerKey;
-        if(subKey){
-          const existingKey = btoa(String.fromCharCode(...new Uint8Array(subKey)))
-            .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
-          if(existingKey !== publicKey){
-            console.log('[PUSH] VAPID key changed, re-subscribing...');
-            await sub.unsubscribe();
-            sub = null;
-          }
-        }
-      }catch(e){
-        // If we can't check, force re-subscribe
-        console.log('[PUSH] Cannot verify VAPID key, re-subscribing...');
-        try{ await sub.unsubscribe(); }catch(e2){}
-        sub = null;
-      }
+      console.log('[PUSH] Clearing old subscription...');
+      try{ await sub.unsubscribe(); }catch(e){ console.warn('[PUSH] Unsubscribe failed:', e.message); }
     }
-    if(!sub){
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: vapidKey
-      });
-      console.log('[PUSH] New push subscription created');
-    }
+
+    console.log('[PUSH] Creating new push subscription...');
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: vapidKey
+    });
+    console.log('[PUSH] Push subscription created, sending to server...');
+
     // Send subscription to server
+    const subData = sub.toJSON();
+    console.log('[PUSH] Subscription endpoint:', subData.endpoint?.slice(0, 60));
     const subRes = await fetch('/api/push/subscribe', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(sub.toJSON())
+      body: JSON.stringify(subData)
     });
     if(!subRes.ok){
       const errData = await subRes.json().catch(()=>({}));
-      console.warn('[PUSH] Subscribe failed:', subRes.status, errData);
+      console.warn('[PUSH] Server subscribe failed:', subRes.status, errData);
       if(!silent) showToast('⚠️ שגיאה ברישום: '+(errData.error||subRes.status));
       return false;
     }
     const result = await subRes.json();
-    console.log('[PUSH] Subscription saved to server, total:', result.total);
+    console.log('[PUSH] Subscription saved! Total:', result.total);
     ss('notif','granted');
     return true;
   }catch(e){
-    console.warn('Push subscribe failed:', e.message);
+    console.error('[PUSH] Subscribe failed:', e);
     if(!silent) showToast('⚠️ '+e.message);
     return false;
   }
@@ -928,7 +961,6 @@ function sendAlertNotif(cities, type){
   });
 }
 
-document.addEventListener('DOMContentLoaded', ()=>{ updateNotifStatus(); });
 // ── ALERT PANEL v2 JS ──
 function apSetLive(connected){
   const pulse=document.getElementById('ap-pulse'),label=document.getElementById('ap-live-label'),sub=document.getElementById('ap-live-sub'),badge=document.getElementById('ap-src-badge');
@@ -1031,7 +1063,7 @@ connectStream();
 pollOnce();
 
 // ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
-const CLIENT_VERSION = '24';
+const CLIENT_VERSION = '30';
 
 (function initAutoUpdate(){
   if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;
