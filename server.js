@@ -8,7 +8,7 @@ const compression = require('compression');
 // ══════════════════════════════════════════════
 // CONFIG & ENVIRONMENT
 // ══════════════════════════════════════════════
-const APP_VERSION = '30';
+const APP_VERSION = '31';
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';

@@ -553,22 +553,27 @@ async function loadNews(manual=false){
   if(manual){btn.disabled=false;btn.innerHTML='⟳ רענן';}
   busy=false;
 }
-function startAuto(){setRefreshInterval(120000);}
+const MIN_REFRESH=60000, DEFAULT_REFRESH=120000;
+const VALID_INTERVALS=[60000,120000,180000,300000];
+function stopAuto(){if(autoT){clearInterval(autoT);autoT=null;}}
 function setRefreshInterval(ms){
   stopAuto();
+  ms=parseInt(ms)||DEFAULT_REFRESH;
+  if(ms<MIN_REFRESH)ms=DEFAULT_REFRESH; // block old sub-minute values
+  if(!VALID_INTERVALS.includes(ms))ms=DEFAULT_REFRESH;
   const lbl=document.getElementById('interval-lbl');
   const sel=document.getElementById('interval-sel');
-  if(!ms){if(lbl)lbl.textContent='כבוי';return;}
   if(sel)sel.value=ms;
   const labels={60000:'כל דקה',120000:'כל 2 דקות',180000:'כל 3 דקות',300000:'כל 5 דקות'};
   if(lbl)lbl.textContent=labels[ms]||'רענון אוטומטי';
   autoT=setInterval(()=>loadNews(),ms);
   ss('refreshInterval',ms);
+  console.log('[REFRESH] Interval set to',ms/1000,'seconds');
 }
-// Restore saved interval
-const _savedInterval=parseInt(gs('refreshInterval')||120000);
-if(_savedInterval>0)setRefreshInterval(_savedInterval);
-function stopAuto(){if(autoT){clearInterval(autoT);autoT=null;}}
+function startAuto(){
+  const saved=parseInt(gs('refreshInterval'))||DEFAULT_REFRESH;
+  setRefreshInterval(saved);
+}
 startAuto();
 
 // Sound — pleasant chime for news, urgent for alerts
@@ -791,19 +796,22 @@ async function updateNotifStatus(){
         pushStatus.style.color='var(--red)';
       }
     }
-    // If permission granted, always ensure subscription is current
+    // If permission granted, ensure we have an active subscription (don't re-subscribe if one exists)
     if(d.webpush && Notification.permission==='granted'){
-      console.log('[PUSH] Permission granted, ensuring subscription is current...');
-      await subscribePush(true); // silent re-subscribe
-      // Re-check status after subscribe
-      try{
-        const r2=await fetch('/api/push/status');
-        const d2=await r2.json();
-        if(pushStatus && d2.subscribers>0){
-          pushStatus.textContent='🟢 מחובר · '+d2.subscribers+' מכשירים רשומים';
-          pushStatus.style.color='var(--green)';
-        }
-      }catch(e){}
+      const hasSub = await checkPushSubscription();
+      if(!hasSub){
+        console.log('[PUSH] No active subscription, creating one...');
+        await subscribePush(true);
+        // Re-check status after subscribe
+        try{
+          const r2=await fetch('/api/push/status');
+          const d2=await r2.json();
+          if(pushStatus && d2.subscribers>0){
+            pushStatus.textContent='🟢 מחובר · '+d2.subscribers+' מכשירים רשומים';
+            pushStatus.style.color='var(--green)';
+          }
+        }catch(e){}
+      }
     }
   }catch(e){
     if(pushStatus){pushStatus.textContent='⚠️ לא ניתן לבדוק חיבור לשרת';pushStatus.style.color='var(--t3)';}
@@ -887,20 +895,33 @@ async function subscribePush(silent){
     // Convert base64url to Uint8Array
     const vapidKey = urlBase64ToUint8Array(publicKey);
 
-    // Always clear old subscription and create fresh one
-    // This ensures VAPID key mismatches never happen
+    // Reuse existing subscription if VAPID key matches, otherwise create new
     let sub = await reg.pushManager.getSubscription();
     if(sub){
-      console.log('[PUSH] Clearing old subscription...');
-      try{ await sub.unsubscribe(); }catch(e){ console.warn('[PUSH] Unsubscribe failed:', e.message); }
+      // Check if existing sub uses same VAPID key by comparing applicationServerKey
+      const existingKey = sub.options && sub.options.applicationServerKey;
+      let keyMatch = false;
+      if(existingKey){
+        const existArr = new Uint8Array(existingKey);
+        keyMatch = existArr.length === vapidKey.length && existArr.every((v,i)=>v===vapidKey[i]);
+      }
+      if(keyMatch){
+        console.log('[PUSH] Existing subscription matches VAPID key, reusing...');
+      } else {
+        console.log('[PUSH] VAPID key mismatch, clearing old subscription...');
+        try{ await sub.unsubscribe(); }catch(e){ console.warn('[PUSH] Unsubscribe failed:', e.message); }
+        sub = null;
+      }
     }
 
-    console.log('[PUSH] Creating new push subscription...');
-    sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: vapidKey
-    });
-    console.log('[PUSH] Push subscription created, sending to server...');
+    if(!sub){
+      console.log('[PUSH] Creating new push subscription...');
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: vapidKey
+      });
+    }
+    console.log('[PUSH] Subscription ready, sending to server...');
 
     // Send subscription to server
     const subData = sub.toJSON();
@@ -1063,7 +1084,7 @@ connectStream();
 pollOnce();
 
 // ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
-const CLIENT_VERSION = '30';
+const CLIENT_VERSION = '31';
 
 (function initAutoUpdate(){
   if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;
