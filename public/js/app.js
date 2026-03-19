@@ -506,7 +506,7 @@ function buildList(){
 let _lastNewsIds = new Set();
 function sendBreakingNotif(title, source){
   if(!('Notification'in window)||Notification.permission!=='granted')return;
-  if(localStorage.getItem('notif')!=='granted')return;
+  if(!gs('pushNews'))return; // respect news toggle
   new Notification('🔴 ' + (source||'מבזק'), {
     body: title, icon:'/icon-192.png', badge:'/icon-192.png',
     dir:'rtl', tag:'news-'+Date.now()
@@ -747,40 +747,64 @@ window.addEventListener('appinstalled',()=>{
   }, 2000);
 })();
 
-// ── NOTIFICATIONS ──
+// ── NOTIFICATIONS — SEPARATE ALERTS vs NEWS ──
+// Settings keys: 'pushAlerts' (boolean), 'pushNews' (boolean)
+
 async function updateNotifStatus(){
-  const btn=document.getElementById('notifBtn');
-  const offBtn=document.getElementById('notifOffBtn');
-  const status=document.getElementById('notifStatus');
+  const alertBtn=document.getElementById('alertPushBtn');
+  const newsBtn=document.getElementById('newsPushBtn');
+  const alertStatus=document.getElementById('alertPushStatus');
+  const newsStatus=document.getElementById('newsPushStatus');
   const pushStatus=document.getElementById('pushServerStatus');
-  if(!btn) return;
+  const offBtn=document.getElementById('notifOffBtn');
 
-  // Check browser support
-  if(!('Notification' in window)){
-    if(status)status.textContent='התראות לא נתמכות בדפדפן זה';
-    if(btn)btn.style.display='none';
+  const noSupport = !('Notification' in window) || !('serviceWorker' in navigator);
+  if(noSupport){
+    [alertStatus,newsStatus].forEach(s=>{if(s)s.textContent='התראות לא נתמכות בדפדפן זה';});
+    [alertBtn,newsBtn].forEach(b=>{if(b)b.style.display='none';});
+    return;
+  }
+
+  if(Notification.permission==='denied'){
+    [alertStatus,newsStatus].forEach(s=>{if(s){s.textContent='❌ חסום — שנה בהגדרות הדפדפן';s.style.color='var(--red)';}});
+    [alertBtn,newsBtn].forEach(b=>{if(b){b.textContent='חסום';b.disabled=true;b.style.background='var(--t3)';}});
     if(offBtn)offBtn.style.display='none';
     return;
   }
 
-  // Update based on browser permission
-  if(Notification.permission==='granted'){
-    if(offBtn)offBtn.style.display='inline-block';
-    if(btn){btn.textContent='מופעל ✓';btn.style.background='var(--green)';btn.disabled=true;}
-    if(status)status.textContent='✅ התראות Push מופעלות';
-  } else if(Notification.permission==='denied'){
-    if(offBtn)offBtn.style.display='none';
-    if(btn){btn.textContent='חסום';btn.style.background='var(--t3)';btn.disabled=true;}
-    if(status)status.textContent='❌ חסום — שנה בהגדרות הדפדפן';
-    return;
-  } else {
-    if(offBtn)offBtn.style.display='none';
-    if(btn){btn.textContent='הפעל';btn.style.background='var(--blue)';btn.disabled=false;}
-    if(status)status.textContent='לחץ הפעל כדי לקבל התראות';
-    return;
+  const alertsOn = gs('pushAlerts');
+  const newsOn = gs('pushNews');
+
+  // Alert button
+  if(alertBtn){
+    if(Notification.permission==='granted' && alertsOn){
+      alertBtn.textContent='מופעל ✓';alertBtn.style.background='var(--green)';alertBtn.disabled=false;
+    } else {
+      alertBtn.textContent='הפעל';alertBtn.style.background='var(--red)';alertBtn.disabled=false;
+    }
+  }
+  if(alertStatus){
+    alertStatus.textContent = alertsOn && Notification.permission==='granted' ? '✅ אזעקות LIVE מופעלות' : 'לחץ הפעל לקבלת אזעקות בזמן אמת';
+    alertStatus.style.color = alertsOn && Notification.permission==='granted' ? 'var(--green)' : 'var(--t3)';
   }
 
-  // Check actual push subscription status with server
+  // News button
+  if(newsBtn){
+    if(Notification.permission==='granted' && newsOn){
+      newsBtn.textContent='מופעל ✓';newsBtn.style.background='var(--green)';newsBtn.disabled=false;
+    } else {
+      newsBtn.textContent='הפעל';newsBtn.style.background='var(--blue)';newsBtn.disabled=false;
+    }
+  }
+  if(newsStatus){
+    newsStatus.textContent = newsOn && Notification.permission==='granted' ? '✅ מבזקי חדשות מופעלים' : 'לחץ הפעל לקבלת מבזקים';
+    newsStatus.style.color = newsOn && Notification.permission==='granted' ? 'var(--green)' : 'var(--t3)';
+  }
+
+  // Off button visible if anything is on
+  if(offBtn) offBtn.style.display = (alertsOn||newsOn) && Notification.permission==='granted' ? 'inline-block' : 'none';
+
+  // Check server + ensure push subscription exists
   try{
     const r=await fetch('/api/push/status');
     const d=await r.json();
@@ -789,32 +813,21 @@ async function updateNotifStatus(){
         pushStatus.textContent='⚠️ שרת Push לא מוגדר';
         pushStatus.style.color='var(--red)';
       } else if(d.subscribers>0){
-        pushStatus.textContent='🟢 מחובר · '+d.subscribers+' מכשירים רשומים';
+        pushStatus.textContent='🟢 '+d.subscribers+' מכשירים מחוברים';
         pushStatus.style.color='var(--green)';
       } else {
-        pushStatus.textContent='⚠️ אין מכשירים רשומים';
-        pushStatus.style.color='var(--red)';
+        pushStatus.textContent='';
       }
     }
-    // If permission granted, ensure we have an active subscription (don't re-subscribe if one exists)
-    if(d.webpush && Notification.permission==='granted'){
+    // Ensure subscription exists if anything is enabled
+    if(d.webpush && Notification.permission==='granted' && (alertsOn||newsOn)){
       const hasSub = await checkPushSubscription();
       if(!hasSub){
-        console.log('[PUSH] No active subscription, creating one...');
         await subscribePush(true);
-        // Re-check status after subscribe
-        try{
-          const r2=await fetch('/api/push/status');
-          const d2=await r2.json();
-          if(pushStatus && d2.subscribers>0){
-            pushStatus.textContent='🟢 מחובר · '+d2.subscribers+' מכשירים רשומים';
-            pushStatus.style.color='var(--green)';
-          }
-        }catch(e){}
       }
     }
   }catch(e){
-    if(pushStatus){pushStatus.textContent='⚠️ לא ניתן לבדוק חיבור לשרת';pushStatus.style.color='var(--t3)';}
+    if(pushStatus){pushStatus.textContent='⚠️ לא ניתן לבדוק חיבור';pushStatus.style.color='var(--t3)';}
   }
 }
 
@@ -825,6 +838,80 @@ async function checkPushSubscription(){
     const sub=await reg.pushManager.getSubscription();
     return !!sub;
   }catch(e){ return false; }
+}
+
+// Toggle alert push notifications
+async function toggleAlertPush(){
+  const btn=document.getElementById('alertPushBtn');
+  const isOn = gs('pushAlerts');
+  if(isOn){
+    // Turn off
+    ss('pushAlerts',false);
+    await updatePushTypes();
+    showToast('🔕 אזעקות Push כובו');
+  } else {
+    // Turn on — ensure permission + subscription
+    if(btn){btn.textContent='מפעיל...';btn.disabled=true;}
+    const ok = await ensurePushReady();
+    if(ok){
+      ss('pushAlerts',true);
+      await updatePushTypes();
+      showToast('🚨 אזעקות LIVE הופעלו!');
+    }
+  }
+  await updateNotifStatus();
+}
+
+// Toggle news push notifications
+async function toggleNewsPush(){
+  const btn=document.getElementById('newsPushBtn');
+  const isOn = gs('pushNews');
+  if(isOn){
+    ss('pushNews',false);
+    await updatePushTypes();
+    showToast('🔕 מבזקי חדשות כובו');
+  } else {
+    if(btn){btn.textContent='מפעיל...';btn.disabled=true;}
+    const ok = await ensurePushReady();
+    if(ok){
+      ss('pushNews',true);
+      await updatePushTypes();
+      showToast('📰 מבזקי חדשות הופעלו!');
+    }
+  }
+  await updateNotifStatus();
+}
+
+// Ensure browser permission + push subscription
+async function ensurePushReady(){
+  if(!('Notification' in window)||!('serviceWorker' in navigator)){
+    showToast('הדפדפן לא תומך בהתראות');return false;
+  }
+  try{
+    await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
+    const perm = await Notification.requestPermission();
+    if(perm!=='granted'){showToast('⚠️ יש לאשר הרשאה בדפדפן');return false;}
+    return await subscribePush(false);
+  }catch(e){
+    showToast('שגיאה: '+e.message);return false;
+  }
+}
+
+// Send subscription type preferences to server
+async function updatePushTypes(){
+  try{
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if(!sub) return;
+    const types = [];
+    if(gs('pushAlerts')) types.push('alerts');
+    if(gs('pushNews')) types.push('news');
+    await fetch('/api/push/subscribe', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ ...sub.toJSON(), types })
+    });
+  }catch(e){ console.warn('[PUSH] updatePushTypes error:', e); }
 }
 
 async function disableNotifications(){
@@ -841,32 +928,10 @@ async function disableNotifications(){
         });
       }
     }
-    ss('notif','');
-    showToast('🔕 התראות בוטלו');
+    ss('pushAlerts',false);ss('pushNews',false);ss('notif','');
+    showToast('🔕 כל ההתראות בוטלו');
     await updateNotifStatus();
   }catch(e){ showToast('שגיאה: '+e.message); }
-}
-async function requestNotifications(){
-  if(!('Notification' in window)){showToast('הדפדפן לא תומך בהתראות');return;}
-  if(!('serviceWorker' in navigator)){showToast('הדפדפן לא תומך ב-Service Worker');return;}
-  const btn=document.getElementById('notifBtn');
-  if(btn){btn.textContent='מפעיל...';btn.disabled=true;}
-  try{
-    // Make sure SW is registered first
-    await navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' });
-    const perm = await Notification.requestPermission();
-    if(perm==='granted'){
-      const ok = await subscribePush(false);
-      if(ok) showToast('🔔 התראות הופעלו!');
-      else showToast('⚠️ הרשמה נכשלה — נסה שוב');
-    } else {
-      showToast('⚠️ יש לאשר הרשאה בדפדפן');
-    }
-  }catch(e){
-    console.error('[PUSH] requestNotifications error:', e);
-    showToast('שגיאה: '+e.message);
-  }
-  await updateNotifStatus();
 }
 
 async function subscribePush(silent){
@@ -876,12 +941,9 @@ async function subscribePush(silent){
       return false;
     }
     const reg = await navigator.serviceWorker.ready;
-    console.log('[PUSH] SW ready, fetching VAPID key...');
 
-    // Get VAPID public key from server
     const keyRes = await fetch('/api/push/vapid-key');
     if(!keyRes.ok){
-      console.warn('[PUSH] VAPID key not available:', keyRes.status);
       if(!silent) showToast('⚠️ שרת התראות לא זמין');
       return false;
     }
@@ -890,55 +952,46 @@ async function subscribePush(silent){
       if(!silent) showToast('⚠️ מפתח Push לא מוגדר בשרת');
       return false;
     }
-    console.log('[PUSH] VAPID key received:', publicKey.slice(0, 20) + '...');
 
-    // Convert base64url to Uint8Array
     const vapidKey = urlBase64ToUint8Array(publicKey);
 
-    // Reuse existing subscription if VAPID key matches, otherwise create new
+    // Reuse existing subscription if VAPID key matches
     let sub = await reg.pushManager.getSubscription();
     if(sub){
-      // Check if existing sub uses same VAPID key by comparing applicationServerKey
       const existingKey = sub.options && sub.options.applicationServerKey;
       let keyMatch = false;
       if(existingKey){
         const existArr = new Uint8Array(existingKey);
         keyMatch = existArr.length === vapidKey.length && existArr.every((v,i)=>v===vapidKey[i]);
       }
-      if(keyMatch){
-        console.log('[PUSH] Existing subscription matches VAPID key, reusing...');
-      } else {
-        console.log('[PUSH] VAPID key mismatch, clearing old subscription...');
-        try{ await sub.unsubscribe(); }catch(e){ console.warn('[PUSH] Unsubscribe failed:', e.message); }
+      if(!keyMatch){
+        try{ await sub.unsubscribe(); }catch(e){}
         sub = null;
       }
     }
 
     if(!sub){
-      console.log('[PUSH] Creating new push subscription...');
       sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: vapidKey
       });
     }
-    console.log('[PUSH] Subscription ready, sending to server...');
 
-    // Send subscription to server
+    // Send subscription + type preferences to server
+    const types = [];
+    if(gs('pushAlerts')) types.push('alerts');
+    if(gs('pushNews')) types.push('news');
     const subData = sub.toJSON();
-    console.log('[PUSH] Subscription endpoint:', subData.endpoint?.slice(0, 60));
     const subRes = await fetch('/api/push/subscribe', {
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body: JSON.stringify(subData)
+      body: JSON.stringify({ ...subData, types })
     });
     if(!subRes.ok){
       const errData = await subRes.json().catch(()=>({}));
-      console.warn('[PUSH] Server subscribe failed:', subRes.status, errData);
       if(!silent) showToast('⚠️ שגיאה ברישום: '+(errData.error||subRes.status));
       return false;
     }
-    const result = await subRes.json();
-    console.log('[PUSH] Subscription saved! Total:', result.total);
     ss('notif','granted');
     return true;
   }catch(e){
@@ -970,6 +1023,7 @@ function urlBase64ToUint8Array(base64String){
 // Send notification when alert arrives
 function sendAlertNotif(cities, type){
   if(!('Notification'in window)||Notification.permission!=='granted')return;
+  if(!gs('pushAlerts'))return; // respect alerts toggle
   const body = Array.isArray(cities) ? cities.slice(0,4).join(' · ') : cities;
   new Notification('🚨 ' + (type||'ירי רקטות'),{
     body: body,
@@ -1084,7 +1138,7 @@ connectStream();
 pollOnce();
 
 // ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
-const CLIENT_VERSION = '31';
+const CLIENT_VERSION = '32';
 
 (function initAutoUpdate(){
   if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;

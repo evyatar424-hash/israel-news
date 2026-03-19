@@ -8,7 +8,7 @@ const compression = require('compression');
 // ══════════════════════════════════════════════
 // CONFIG & ENVIRONMENT
 // ══════════════════════════════════════════════
-const APP_VERSION = '31';
+const APP_VERSION = '32';
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
@@ -121,26 +121,32 @@ async function sendWebPush(subscription, payload) {
 
 async function broadcastNewsPush(item) {
   if (!pushSubscriptions.length || !_webpush) return;
+  // Only send to subscribers who opted into news
+  const newsSubs = pushSubscriptions.filter(s => !s.types || s.types.includes('news'));
+  if (!newsSubs.length) return;
   const payload = {
     title: '📰 ' + (item.sourceName || 'חדשות IL'),
     body: item.title || '',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
     image: item.image || undefined,
-    data: { url: item.link || '/' },
+    data: { url: item.link || '/', type: 'news' },
     vibrate: [200, 50, 200],
     dir: 'rtl',
     lang: 'he',
     tag: 'news-' + item.id,
     renotify: false,
   };
-  const results = await Promise.allSettled(pushSubscriptions.map(s => sendWebPush(s, payload)));
+  const results = await Promise.allSettled(newsSubs.map(s => sendWebPush(s, payload)));
   const ok = results.filter(r => r.status === 'fulfilled' && r.value).length;
-  console.log(`[NEWS PUSH] "${item.title?.slice(0, 40)}" → ${ok}/${pushSubscriptions.length}`);
+  console.log(`[NEWS PUSH] "${item.title?.slice(0, 40)}" → ${ok}/${newsSubs.length} (news subscribers)`);
 }
 
 async function broadcastAlertPush(alert) {
   if (!pushSubscriptions.length || !_webpush) return;
+  // Only send to subscribers who opted into alerts
+  const alertSubs = pushSubscriptions.filter(s => !s.types || s.types.includes('alerts'));
+  if (!alertSubs.length) return;
   const cities = alert.data || [];
   const preview = cities.slice(0, 3).join(', ') + (cities.length > 3 ? ` +${cities.length - 3}` : '');
   const payload = {
@@ -148,16 +154,16 @@ async function broadcastAlertPush(alert) {
     body: preview || 'אזעקה פעילה',
     icon: '/icon-192.png',
     badge: '/icon-192.png',
-    data: { url: '/', alertId: alert.id },
+    data: { url: '/', alertId: alert.id, type: 'alert' },
     vibrate: [300, 100, 300, 100, 300],
     requireInteraction: true,
     dir: 'rtl',
     lang: 'he',
   };
-  console.log(`[ALERT PUSH] → ${pushSubscriptions.length} subscribers: ${preview}`);
-  const results = await Promise.allSettled(pushSubscriptions.map(s => sendWebPush(s, payload)));
+  console.log(`[ALERT PUSH] → ${alertSubs.length} alert subscribers: ${preview}`);
+  const results = await Promise.allSettled(alertSubs.map(s => sendWebPush(s, payload)));
   const ok = results.filter(r => r.status === 'fulfilled' && r.value).length;
-  console.log(`[ALERT PUSH] Sent: ${ok}/${pushSubscriptions.length}`);
+  console.log(`[ALERT PUSH] Sent: ${ok}/${alertSubs.length}`);
 }
 
 // ══════════════════════════════════════════════
@@ -969,10 +975,14 @@ app.get('/api/version', (req, res) => {
 });
 
 app.get('/api/push/status', (req, res) => {
+  const alertSubs = pushSubscriptions.filter(s => !s.types || s.types.includes('alerts')).length;
+  const newsSubs = pushSubscriptions.filter(s => !s.types || s.types.includes('news')).length;
   res.json({
     webpush: !!_webpush,
     vapidSet: !!(vapidPublic && vapidPrivate),
     subscribers: pushSubscriptions.length,
+    alertSubscribers: alertSubs,
+    newsSubscribers: newsSubs,
   });
 });
 
@@ -1024,15 +1034,18 @@ app.post('/api/push/subscribe', rateLimitMiddleware(30), (req, res) => {
     pushSubscriptions.shift();
   }
 
+  // Types: ['alerts'], ['news'], ['alerts','news'], or empty (= both for backwards compat)
+  const types = Array.isArray(sub.types) ? sub.types : ['alerts', 'news'];
+
   // Update existing or add new
   const idx = pushSubscriptions.findIndex(s => s.endpoint === sub.endpoint);
-  const subObj = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } };
+  const subObj = { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth }, types };
   if (idx >= 0) {
     pushSubscriptions[idx] = subObj;
-    console.log(`[PUSH] Updated existing subscription. Total: ${pushSubscriptions.length}`);
+    console.log(`[PUSH] Updated subscription (types: ${types.join(',')}). Total: ${pushSubscriptions.length}`);
   } else {
     pushSubscriptions.push(subObj);
-    console.log(`[PUSH] New subscription added. Total: ${pushSubscriptions.length}`);
+    console.log(`[PUSH] New subscription (types: ${types.join(',')}). Total: ${pushSubscriptions.length}`);
   }
   saveSubs();
   res.json({ ok: true, total: pushSubscriptions.length });
