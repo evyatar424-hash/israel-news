@@ -182,23 +182,41 @@
       <button onclick="installPWA()" style="width:100%;padding:12px;border-radius:var(--r1);font-family:var(--f);font-size:14px;font-weight:700;border:none;background:var(--blue);color:#fff;cursor:pointer">📲 התקן על המסך הראשי</button>
     </div>
 
-    <div id="notifCard">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:9px">
-        <div><div class="s-main">🔔 התראות Push</div><div class="s-sub">קבל התראה מיידית על כל אזעקה — גם כשהאפליקציה סגורה</div></div>
-        <button id="notifBtn" onclick="requestNotifications()" style="padding:8px 18px;border-radius:20px;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">הפעל</button>
+    <div class="s-lbl">🚨 התראות אזעקות — LIVE</div>
+    <div class="s-card" style="border:2px solid var(--red);position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--red),#ff6b35,var(--red));animation:alertPulse 2s infinite"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding-top:4px">
+        <div>
+          <div class="s-main" style="color:var(--red);font-size:15px">🚨 אזעקות צבע אדום</div>
+          <div class="s-sub">קבל אזעקה מיידית על ירי רקטות — גם כשהאפליקציה סגורה. קריטי!</div>
+        </div>
+        <button id="alertPushBtn" onclick="toggleAlertPush()" style="padding:8px 18px;border-radius:20px;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;background:var(--red);color:#fff">הפעל</button>
       </div>
-      <div id="notifStatus" style="font-size:11px;color:var(--t3)">בודק סטטוס...</div>
-      <div id="pushServerStatus" style="font-size:10px;color:var(--t3);margin-top:4px"></div>
-      <div style="display:flex;gap:8px;margin-top:8px;align-items:center">
-        <button id="notifOffBtn" onclick="disableNotifications()" style="display:none;padding:6px 14px;border-radius:20px;border:1px solid var(--b2);background:transparent;color:var(--t3);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer">🔕 בטל התראות</button>
-        <button class="s-btn sb-blue" onclick="testPush()" style="padding:6px 14px;border-radius:20px;font-size:12px;margin:0">📤 שלח פוש בדיקה</button>
-      </div>
+      <div id="alertPushStatus" style="font-size:11px;color:var(--t3)"></div>
+      <div class="s-row" style="border:0;padding:4px 0"><div class="s-left"><span class="s-ico">🔊</span><div><div class="s-main">צליל אזעקה</div><div class="s-sub">צפירה דחופה בעת אזעקה</div></div></div><div class="tgl on" id="tg-sound" onclick="tog('sound')"></div></div>
+      <div class="s-row" style="border:0;padding:4px 0"><div class="s-left"><span class="s-ico">📳</span><div><div class="s-main">ויברציה</div><div class="s-sub">רטט חזק ורציף</div></div></div><div class="tgl on" id="tg-vib" onclick="tog('vib')"></div></div>
     </div>
 
-    <div class="s-lbl">צלילים ורטט</div>
+    <div class="s-lbl">📰 התראות כתבות מתפרצות</div>
     <div class="s-card">
-      <div class="s-row"><div class="s-left"><span class="s-ico">🔊</span><div><div class="s-main">צליל אזעקה</div><div class="s-sub">צפירה בעת אזעקה</div></div></div><div class="tgl on" id="tg-sound" onclick="tog('sound')"></div></div>
-      <div class="s-row"><div class="s-left"><span class="s-ico">📳</span><div><div class="s-main">ויברציה</div><div class="s-sub">רטט חזק</div></div></div><div class="tgl on" id="tg-vib" onclick="tog('vib')"></div></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <div>
+          <div class="s-main">📰 מבזקי חדשות</div>
+          <div class="s-sub">קבל התראה על כתבות מתפרצות וחדשות דחופות</div>
+        </div>
+        <button id="newsPushBtn" onclick="toggleNewsPush()" style="padding:8px 18px;border-radius:20px;border:none;font-family:var(--f);font-size:13px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff">הפעל</button>
+      </div>
+      <div id="newsPushStatus" style="font-size:11px;color:var(--t3)"></div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin-top:4px;align-items:center;flex-wrap:wrap">
+      <div id="pushServerStatus" style="font-size:10px;color:var(--t3)"></div>
+      <button class="s-btn sb-blue" onclick="testPush()" style="padding:6px 14px;border-radius:20px;font-size:12px;margin:0">📤 שלח בדיקה</button>
+      <button id="notifOffBtn" onclick="disableNotifications()" style="display:none;padding:6px 14px;border-radius:20px;border:1px solid var(--b2);background:transparent;color:var(--t3);font-family:var(--f);font-size:12px;font-weight:600;cursor:pointer">🔕 בטל הכל</button>
+    </div>
+
+    <div class="s-lbl">צלילים</div>
+    <div class="s-card">
       <div class="s-row col"><div class="s-main" style="margin-bottom:4px">🔉 עוצמת קול</div><input type="range" min="0" max="100" value="80" id="vsl" oninput="vol=this.value/100;ss('vol',vol)"></div>
     </div>
     <button class="s-btn sb-blue" onclick="testAudio()">▶ בדוק צליל</button>
@@ -230,7 +248,7 @@
       <div class="s-link-row"><div><div class="s-main">קבוצת WhatsApp</div><div class="s-sub">עדכונים בזמן אמת</div></div><a href="https://chat.whatsapp.com/GnpGSBF4V5gKZUDXlRmtDQ?mode=gi_t" target="_blank" style="font-size:20px">💬</a></div>
     </div>
 
-    <div class="s-footer">חדשות IL · v30<br>ynet · וואלה · כאן 11 · חדשות 12 · רשת 13 · ערוץ 14<br>מאקו · מעריב · הארץ · גלובס · כלכליסט · דובר צבא · גלצ</div>
+    <div class="s-footer">חדשות IL · v32<br>ynet · וואלה · כאן 11 · חדשות 12 · רשת 13 · ערוץ 14<br>מאקו · מעריב · הארץ · גלובס · כלכליסט · דובר צבא · גלצ</div>
   </div>
 </div>
 
