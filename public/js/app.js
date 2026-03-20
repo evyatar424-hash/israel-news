@@ -611,7 +611,7 @@ function testAudio(){playChime(false);if(gs('vib')&&navigator.vibrate)navigator.
 
 // Alert UI
 function triggerAlert(areas,type,key){
-  sendAlertNotif(areas,type);
+  sendAlertNotif(areas,type); // sends browser notification (respects pushAlerts toggle)
   if(key===lastKey)return;lastKey=key;alertOn=true;
   const str=Array.isArray(areas)?areas.map(a=>safeText(a)).join(' · '):safeText(String(areas));
   document.getElementById('bar-areas').textContent=str;
@@ -623,8 +623,6 @@ function triggerAlert(areas,type,key){
   document.getElementById('ovl').classList.add('on');
   playAlarm();
   if(gs('vib')&&navigator.vibrate)navigator.vibrate([500,150,500,150,500,150,500]);
-  if('Notification'in window&&Notification.permission==='granted')
-    new Notification('🚨 '+type,{body:str,icon:'/icon-192.png',requireInteraction:true});
   histItems.unshift({data:Array.isArray(areas)?areas:[areas],title:type,alertDate:new Date().toISOString()});
   if(histItems.length>20)histItems.length=20;
   apSetAlert({data:Array.isArray(areas)?areas:[areas],title:type});
@@ -1001,16 +999,21 @@ async function subscribePush(silent){
   }
 }
 
-async function testPush(){
-  const btn=document.querySelector('[onclick="testPush()"]');
+async function testPush(type){
+  type = type || 'general';
+  const btn=document.querySelector('[onclick*="testPush"]');
   if(btn){btn.textContent='📤 שולח...';btn.disabled=true;}
   try{
-    const r = await fetch('/api/push/test',{method:'POST'});
+    const r = await fetch('/api/push/test',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ type })
+    });
     const d = await r.json();
-    if(d.ok) showToast('✅ פוש נשלח ל-'+d.subscribers+' מכשירים');
+    if(d.ok) showToast('✅ נשלח ל-'+d.subscribers+' מכשירים');
     else showToast('⚠️ '+(d.msg||d.error||'שגיאה'));
   }catch(e){ showToast('שגיאה: '+e.message); }
-  if(btn){btn.textContent='📤 שלח פוש בדיקה';btn.disabled=false;}
+  if(btn){btn.textContent='📤 שלח בדיקה';btn.disabled=false;}
 }
 
 function urlBase64ToUint8Array(base64String){
@@ -1138,7 +1141,7 @@ connectStream();
 pollOnce();
 
 // ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
-const CLIENT_VERSION = '32';
+const CLIENT_VERSION = '33';
 
 (function initAutoUpdate(){
   if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;

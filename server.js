@@ -8,7 +8,7 @@ const compression = require('compression');
 // ══════════════════════════════════════════════
 // CONFIG & ENVIRONMENT
 // ══════════════════════════════════════════════
-const APP_VERSION = '32';
+const APP_VERSION = '33';
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
@@ -121,8 +121,8 @@ async function sendWebPush(subscription, payload) {
 
 async function broadcastNewsPush(item) {
   if (!pushSubscriptions.length || !_webpush) return;
-  // Only send to subscribers who opted into news
-  const newsSubs = pushSubscriptions.filter(s => !s.types || s.types.includes('news'));
+  // Only send to subscribers who opted into news (no types = legacy = both)
+  const newsSubs = pushSubscriptions.filter(s => !s.types || !s.types.length || s.types.includes('news'));
   if (!newsSubs.length) return;
   const payload = {
     title: '📰 ' + (item.sourceName || 'חדשות IL'),
@@ -144,8 +144,8 @@ async function broadcastNewsPush(item) {
 
 async function broadcastAlertPush(alert) {
   if (!pushSubscriptions.length || !_webpush) return;
-  // Only send to subscribers who opted into alerts
-  const alertSubs = pushSubscriptions.filter(s => !s.types || s.types.includes('alerts'));
+  // Only send to subscribers who opted into alerts (no types = legacy = both)
+  const alertSubs = pushSubscriptions.filter(s => !s.types || !s.types.length || s.types.includes('alerts'));
   if (!alertSubs.length) return;
   const cities = alert.data || [];
   const preview = cities.slice(0, 3).join(', ') + (cities.length > 3 ? ` +${cities.length - 3}` : '');
@@ -878,7 +878,7 @@ async function pollOref() {
 
     console.log('🚨 [OREF] Alert:', currentAlert.title, currentAlert.data.slice(0, 3));
     broadcastSSE({ alert: currentAlert, connected: true });
-    broadcastAlertPush(currentAlert);
+    broadcastAlertPush(currentAlert).catch(e => console.error('[ALERT PUSH] Error:', e.message));
 
     if (orefAlertClearTimer) clearTimeout(orefAlertClearTimer);
     orefAlertClearTimer = setTimeout(() => {
@@ -989,21 +989,57 @@ app.get('/api/push/status', (req, res) => {
 app.post('/api/push/test', rateLimitMiddleware(5), async (req, res) => {
   if (!_webpush) return res.json({ ok: false, msg: 'שרת Push לא מוגדר (VAPID חסר)' });
   if (!pushSubscriptions.length) return res.json({ ok: false, msg: 'אין מנויים רשומים. לחץ "הפעל" קודם.' });
-  const payload = {
-    title: '🔔 בדיקת התראות',
-    body: 'חדשות IL — ההתראות עובדות!',
-    icon: '/icon-192.png',
-    badge: '/icon-192.png',
-    data: { url: '/' },
-    tag: 'test-' + Date.now(),
-    renotify: true,
-  };
-  const results = await Promise.allSettled(pushSubscriptions.map(s => sendWebPush(s, payload)));
+
+  const type = req.body?.type || 'general'; // 'alert', 'news', or 'general'
+  let targetSubs = pushSubscriptions;
+  let payload;
+
+  if (type === 'alert') {
+    targetSubs = pushSubscriptions.filter(s => !s.types || !s.types.length || s.types.includes('alerts'));
+    payload = {
+      title: '🚨 בדיקת אזעקה',
+      body: 'זוהי בדיקה — אין סכנה',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: '/', type: 'alert' },
+      vibrate: [300, 100, 300, 100, 300],
+      requireInteraction: true,
+      tag: 'test-alert-' + Date.now(),
+      renotify: true,
+      dir: 'rtl', lang: 'he',
+    };
+  } else if (type === 'news') {
+    targetSubs = pushSubscriptions.filter(s => !s.types || !s.types.length || s.types.includes('news'));
+    payload = {
+      title: '📰 בדיקת מבזק חדשות',
+      body: 'זוהי בדיקה — מבזקי חדשות עובדים!',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: '/', type: 'news' },
+      tag: 'test-news-' + Date.now(),
+      renotify: true,
+      dir: 'rtl', lang: 'he',
+    };
+  } else {
+    payload = {
+      title: '🔔 בדיקת התראות',
+      body: 'חדשות IL — ההתראות עובדות!',
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      data: { url: '/' },
+      tag: 'test-' + Date.now(),
+      renotify: true,
+    };
+  }
+
+  if (!targetSubs.length) return res.json({ ok: false, msg: `אין מנויים מסוג ${type}. הפעל את הסוג המתאים בהגדרות.` });
+
+  const results = await Promise.allSettled(targetSubs.map(s => sendWebPush(s, payload)));
   const ok = results.filter(r => r.status === 'fulfilled' && r.value).length;
   const failed = results.length - ok;
-  console.log(`[PUSH TEST] Sent: ${ok}/${results.length}, Failed: ${failed}`);
-  if (ok === 0) return res.json({ ok: false, msg: `שליחה נכשלה ל-${results.length} מנויים. נסה לכבות ולהפעיל מחדש.` });
-  res.json({ ok: true, subscribers: ok, total: results.length });
+  console.log(`[PUSH TEST ${type}] Sent: ${ok}/${targetSubs.length}, Failed: ${failed}`);
+  if (ok === 0) return res.json({ ok: false, msg: `שליחה נכשלה ל-${targetSubs.length} מנויים. נסה לכבות ולהפעיל מחדש.` });
+  res.json({ ok: true, subscribers: ok, total: targetSubs.length, type });
 });
 
 app.get('/api/push/vapid-key', (req, res) => {
@@ -1057,6 +1093,27 @@ app.post('/api/push/unsubscribe', rateLimitMiddleware(30), (req, res) => {
   pushSubscriptions = pushSubscriptions.filter(s => s.endpoint !== endpoint);
   saveSubs();
   res.json({ ok: true });
+});
+
+// Push debug endpoint — diagnose push pipeline
+app.get('/api/push/debug', (req, res) => {
+  const alertSubs = pushSubscriptions.filter(s => !s.types || !s.types.length || s.types.includes('alerts'));
+  const newsSubs = pushSubscriptions.filter(s => !s.types || !s.types.length || s.types.includes('news'));
+  res.json({
+    webpushInit: !!_webpush,
+    vapidPublicKey: vapidPublic ? vapidPublic.slice(0, 20) + '...' : null,
+    vapidFromEnv: !!(VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY),
+    totalSubscriptions: pushSubscriptions.length,
+    alertSubscriptions: alertSubs.length,
+    newsSubscriptions: newsSubs.length,
+    subscriptions: pushSubscriptions.map(s => ({
+      endpoint: s.endpoint.slice(0, 60) + '...',
+      types: s.types || ['alerts','news'],
+      hasKeys: !!(s.keys && s.keys.p256dh && s.keys.auth),
+    })),
+    lastAlert: currentAlert ? { title: currentAlert.title, ts: currentAlert.ts } : null,
+    orefConnected,
+  });
 });
 
 // ══════════════════════════════════════════════
