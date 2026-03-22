@@ -1,0 +1,35 @@
+name: Drug Search
+
+on:
+  schedule:
+    - cron: '0 5 * * *'  # 07:00 Israel time (UTC+2)
+  workflow_dispatch:       # Allow manual trigger from GitHub UI
+
+jobs:
+  search:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write      # Needed to commit state file back to repo
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Run drug search
+        env:
+          TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+          TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+          TWILIO_WHATSAPP_FROM: ${{ secrets.TWILIO_WHATSAPP_FROM }}
+          WHATSAPP_TO: ${{ secrets.WHATSAPP_TO }}
+        run: node jobs/drugSearch.js
+
+      - name: Commit state if changed
+        run: |
+          git config user.name "gal-work-bot"
+          git config user.email "bot@gal-work"
+          git add state/drug-search-state.json
+          git diff --cached --quiet || git commit -m "chore: update drug search state"
+          git push
