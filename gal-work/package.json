@@ -1,0 +1,13 @@
+{
+  "name": "gal-work-drug-search",
+  "version": "1.0.0",
+  "description": "Automated drug news search with WhatsApp notifications",
+  "main": "jobs/drugSearch.js",
+  "scripts": {
+    "start": "node jobs/drugSearch.js"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": ">=18"
+  }
+}
