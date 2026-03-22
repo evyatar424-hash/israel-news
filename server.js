@@ -1182,6 +1182,39 @@ setInterval(() => {
 }, 60_000);
 
 // Admin-only manual trigger
+// Drug search admin endpoints
+app.get('/api/drugs/status', rateLimitMiddleware(), (req, res) => {
+  const status = DRUG_SEARCH_LIST.map(d => ({
+    id: d.id,
+    searchTerms: d.searchTerms,
+    found: !!drugFoundState[d.id],
+    ...(drugFoundState[d.id] || {}),
+  }));
+  res.json({ ok: true, drugs: status });
+});
+
+app.post('/api/drugs/search', rateLimitMiddleware(3), async (req, res) => {
+  if (!ADMIN_SECRET) return res.status(503).json({ ok: false, msg: 'Admin endpoint not configured' });
+  const secret = req.headers['x-secret'] || req.body?.secret;
+  if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, msg: 'Unauthorized' });
+  const newFound = await runDrugSearch().catch(e => { console.error('[DRUG]', e); return -1; });
+  res.json({ ok: true, newFound });
+});
+
+app.post('/api/drugs/reset', rateLimitMiddleware(3), async (req, res) => {
+  if (!ADMIN_SECRET) return res.status(503).json({ ok: false, msg: 'Admin endpoint not configured' });
+  const secret = req.headers['x-secret'] || req.body?.secret;
+  if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, msg: 'Unauthorized' });
+  const { id } = req.body || {};
+  if (id) {
+    delete drugFoundState[id];
+  } else {
+    drugFoundState = {};
+  }
+  saveDrugState();
+  res.json({ ok: true, reset: id || 'all' });
+});
+
 app.post('/api/push/daily-summary', rateLimitMiddleware(3), async (req, res) => {
   if (!ADMIN_SECRET) return res.status(503).json({ ok: false, msg: 'Admin endpoint not configured' });
   const secret = req.headers['x-secret'] || req.body?.secret;
@@ -1191,6 +1224,133 @@ app.post('/api/push/daily-summary', rateLimitMiddleware(3), async (req, res) => 
   await generateDailySummary();
   res.json({ ok: true, subscribers: pushSubscriptions.length });
 });
+
+// ══════════════════════════════════════════════
+// DRUG SEARCH — ISRAEL MINISTRY OF HEALTH
+// ══════════════════════════════════════════════
+
+const DRUG_STATE_FILE = path.join(__dirname, 'drug-search-state.json');
+let drugFoundState = {};
+
+try {
+  if (fs.existsSync(DRUG_STATE_FILE)) {
+    drugFoundState = JSON.parse(fs.readFileSync(DRUG_STATE_FILE, 'utf8'));
+    console.log('[DRUG] Loaded state:', Object.keys(drugFoundState).join(', ') || 'none found yet');
+  }
+} catch (e) { drugFoundState = {}; }
+
+function saveDrugState() {
+  try { fs.writeFileSync(DRUG_STATE_FILE, JSON.stringify(drugFoundState, null, 2)); } catch (e) {}
+}
+
+const DRUG_SEARCH_LIST = [
+  { id: 'imlunestrant', searchTerms: ['Imlunestrant', 'Inluriyo'] },
+  { id: 'camizestrant', searchTerms: ['Camizestrant', 'AZD9833'] },
+  { id: 'giredestrant', searchTerms: ['Giredestrant', 'RO7197597'] },
+];
+
+async function searchDrugInDB(term) {
+  const res = await fetch(
+    'https://israeldrugs.health.gov.il/GovServiceList/IDRServer/SearchByName',
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'Origin': 'https://israeldrugs.health.gov.il',
+        'Referer': 'https://israeldrugs.health.gov.il/',
+      },
+      body: JSON.stringify({ val: term, prescription: false, healthServices: false, offset: 0, pageSize: 10 }),
+      signal: AbortSignal.timeout(12000),
+    }
+  );
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const data = await res.json();
+  return Array.isArray(data) ? data : (data.data || data.items || []);
+}
+
+async function sendDrugFoundTelegram(drugId, results, term) {
+  if (!TELEGRAM_BOT_TOKEN || !TELEGRAM_CHANNEL) return;
+  const first = results[0];
+  const name = first.dragEnName || first.tradeName || first.name || term;
+  const regNum = first.regNum || first.dragRegNum || '';
+  const regNumStr = regNum ? `\n📋 מספר רישום: ${regNum}` : '';
+  const text = [
+    `💊 *תרופה חדשה אושרה במאגר משרד הבריאות\\!*`,
+    ``,
+    `*${name.replace(/[*_[\]()~`>#+=|{}.!-]/g, '\\$&')}*`,
+    `🔍 נמצא בחיפוש: ${term}${regNumStr}`,
+    `📊 ${results.length} תוצאות`,
+    ``,
+    `🔗 https://israeldrugs.health.gov.il/#!/byDrug`,
+  ].join('\n');
+  try {
+    const r = await fetch(
+      'https://api.telegram.org/bot' + TELEGRAM_BOT_TOKEN + '/sendMessage',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: TELEGRAM_CHANNEL, text, parse_mode: 'MarkdownV2', disable_web_page_preview: true }),
+        signal: AbortSignal.timeout(8000),
+      }
+    );
+    const d = await r.json();
+    if (!d.ok) console.log('[DRUG] TG error:', d.description);
+    else console.log('[DRUG] TG sent for:', drugId);
+  } catch (e) {
+    console.log('[DRUG] TG failed:', e.message);
+  }
+}
+
+async function runDrugSearch() {
+  console.log('[DRUG] Running search —', new Date().toISOString());
+  let newFound = 0;
+
+  for (const drug of DRUG_SEARCH_LIST) {
+    if (drugFoundState[drug.id]) {
+      console.log('[DRUG] Skip', drug.id, '— already registered', drugFoundState[drug.id].foundAt);
+      continue;
+    }
+    for (const term of drug.searchTerms) {
+      try {
+        const results = await searchDrugInDB(term);
+        if (results.length > 0) {
+          console.log('[DRUG] FOUND:', drug.id, 'via', term, '-', results.length, 'results');
+          drugFoundState[drug.id] = { foundAt: new Date().toISOString(), term, count: results.length };
+          saveDrugState();
+          await sendDrugFoundTelegram(drug.id, results, term);
+          newFound++;
+          break;
+        } else {
+          console.log('[DRUG] Not found:', drug.id, 'via', term);
+        }
+      } catch (e) {
+        console.log('[DRUG] Error searching', term, ':', e.message);
+      }
+      await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+
+  console.log('[DRUG] Done —', newFound, 'new drug(s) found');
+  return newFound;
+}
+
+function scheduleDrugSearch() {
+  function msUntil7AM() {
+    const now = new Date();
+    const target = new Date(now);
+    target.setHours(7, 0, 0, 0);
+    if (target <= now) target.setDate(target.getDate() + 1);
+    return target - now;
+  }
+  const ms = msUntil7AM();
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000);
+  console.log(`[DRUG] Next search at 07:00 (in ${h}h ${m}m)`);
+  setTimeout(function tick() {
+    runDrugSearch().catch(e => console.error('[DRUG] Unhandled:', e));
+    setTimeout(tick, 24 * 60 * 60 * 1000);
+  }, ms);
+}
 
 // ══════════════════════════════════════════════
 // TELEGRAM INTEGRATION
@@ -1282,4 +1442,7 @@ app.listen(PORT, async () => {
   // Start Oref polling
   pollOref();
   setInterval(pollOref, 15_000);
+
+  // Start daily drug search at 07:00
+  scheduleDrugSearch();
 });
