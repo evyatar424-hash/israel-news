@@ -16,6 +16,35 @@ function proxyUrl(url){
   return '/api/img-proxy?url='+encodeURIComponent(url);
 }
 
+// ── RELATIVE TIME ──
+function relTime(ts){
+  if(!ts)return '';
+  const diff=Date.now()-new Date(ts).getTime();
+  const m=Math.floor(diff/60000);
+  if(m<1)return 'עכשיו';
+  if(m<60)return 'לפני '+m+' דק׳';
+  const h=Math.floor(m/60);
+  if(h<24)return 'לפני '+h+' שע׳';
+  const d=Math.floor(h/24);
+  return 'לפני '+d+' ימים';
+}
+
+// ── OFFLINE DETECTION ──
+function updateOnlineStatus(){
+  const bar=document.getElementById('offline-bar');
+  if(!bar)return;
+  if(navigator.onLine){bar.classList.remove('on');}
+  else{bar.classList.add('on');}
+  // Update settings connection status
+  const dot=document.getElementById('connDot');
+  const txt=document.getElementById('connStatus');
+  if(dot)dot.style.background=navigator.onLine?'var(--green)':'var(--red)';
+  if(txt)txt.textContent=navigator.onLine?'מחובר':'לא מחובר';
+}
+window.addEventListener('online',updateOnlineStatus);
+window.addEventListener('offline',updateOnlineStatus);
+setTimeout(updateOnlineStatus,500);
+
 // ── TOAST NOTIFICATIONS ──
 let _toastTimer=null;
 function showToast(msg,duration=2500){
@@ -62,7 +91,7 @@ initBackToTop();
 
 
 const ST=JSON.parse(localStorage.getItem('iln10')||'{}');
-const DF={sound:true,vib:true,auto:true};
+const DF={sound:true,vib:true,auto:true,pushAlerts:true,pushNews:false};
 const gs=k=>k in ST?ST[k]:DF[k];
 const ss=(k,v)=>{ST[k]=v;localStorage.setItem('iln10',JSON.stringify(ST));};
 ['sound','vib','auto'].forEach(k=>{if(gs(k))document.getElementById('tg-'+k)?.classList.add('on');});
@@ -92,11 +121,13 @@ function setTopic(t) {
   document.querySelectorAll('.tc').forEach(el => el.classList.toggle('on', el.dataset.t === t));
   buildList();
 }
+let _searchTimer=null;
 function onSearch(val) {
   searchQuery = val.trim().toLowerCase();
   const cb = document.getElementById('search-clear');
   if (cb) cb.classList.toggle('on', searchQuery.length > 0);
-  buildList();
+  clearTimeout(_searchTimer);
+  _searchTimer=setTimeout(buildList,150);
 }
 function clearSearch() {
   const inp = document.getElementById('search-input');
@@ -147,11 +178,13 @@ function goTab(t){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
   document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  document.getElementById('panel-'+t).classList.add('on');
-  document.getElementById('t-'+t).classList.add('on');
-  document.getElementById('nb-'+t).classList.add('on');
+  const panel=document.getElementById('panel-'+t);
+  if(panel)panel.classList.add('on');
+  document.getElementById('t-'+t)?.classList.add('on');
+  document.getElementById('nb-'+t)?.classList.add('on');
+  window.scrollTo({top:0,behavior:'instant'});
   if(t==='alerts') setTimeout(apLoadHistory, 200);
-  if(t==='settings') setTimeout(updateNotifStatus, 200);
+  if(t==='settings'){setTimeout(updateNotifStatus, 200);updateOnlineStatus();}
 }
 
 function tog(k){const v=!gs(k);ss(k,v);const e=document.getElementById('tg-'+k);v?e.classList.add('on'):e.classList.remove('on');if(k==='auto')v?startAuto():stopAuto();}
@@ -263,7 +296,7 @@ function buildHero(item){
   const title=safeText(item.title);
   const desc=safeText((item.desc||'').slice(0,120));
   const link=safeUrl(item.link);
-  const time=safeText(item.timeAgo||'');
+  const time=item.ts?relTime(item.ts):safeText(item.timeAgo||'');
   const isFresh = item.ts && (Date.now() - item.ts) < 15*60*1000;
   const badgeHtml = isFresh ? '<div class="hero-tags"><span class="hero-breaking">⚡ מבזק</span></div>' : '<div class="hero-tags"></div>';
   // Fallback chain: upgraded → original → proxy → text-only
@@ -457,7 +490,10 @@ function buildList(){
   // Breaking detection (always on full list)
   detectBreaking(cur==='all'?items:items.filter(x=>x.source===cur));
   buildTrending(cur==='all'?items:list);
-  if(!list.length){el.innerHTML='<div class="empty"><div class="empty-ico">📭</div><div class="empty-txt">אין כתבות</div></div>';return;}
+  if(!list.length){
+    const msg=searchQuery?'🔍 לא נמצאו תוצאות עבור "'+safeText(searchQuery)+'"':'📭 אין כתבות';
+    el.innerHTML='<div class="empty"><div class="empty-ico">'+(searchQuery?'🔍':'📭')+'</div><div class="empty-txt">'+msg+'</div></div>';return;
+  }
   el.innerHTML='';
   const sep=document.createElement('div');sep.className='sep';
   sep.innerHTML='<span class="sep-line"></span><span>עדכון '+new Date().toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})+'</span><span class="sep-line"></span>';
@@ -477,8 +513,9 @@ function buildList(){
       : '';
     const proxyImg = hi ? proxyUrl(item.image) : '';
     const imgHtml = hi ? '<div class="nc-img-wrap"><img class="nc-img" src="'+safeUrl(upgradedImg)+'" alt="" loading="lazy" onerror="var f=parseInt(this.dataset.fell||0);this.dataset.fell=f+1;if(f===0){this.src=\''+safeUrl(item.image)+'\';}else if(f===1){this.src=\''+proxyImg+'\';}else{this.parentElement.remove();}"></div>' : '';
+    const timeDisplay = item.ts ? relTime(item.ts) : safeText(item.timeAgo);
     a.innerHTML='<div class="nc-bar" style="background:'+ch.c+'"></div>'+imgHtml+
-      '<div class="nc-body"><div class="nc-top"><span class="nc-src" style="background:'+ch.c+'18;color:'+ch.c+'">'+logoHtml+safeText(ch.n)+'</span><div class="nc-right"><span class="nc-time">'+safeText(item.timeAgo)+'</span>'+(isNew?'<span class="nc-new">חדש</span>':'')+'</div></div>'+
+      '<div class="nc-body"><div class="nc-top"><span class="nc-src" style="background:'+ch.c+'18;color:'+ch.c+'">'+logoHtml+safeText(ch.n)+'</span><div class="nc-right"><span class="nc-time">'+timeDisplay+'</span>'+(isNew?'<span class="nc-new">חדש</span>':'')+'</div></div>'+
       '<div class="nc-title">'+safeText(item.title)+'</div>'+(item.desc?'<div class="nc-desc">'+safeText(item.desc)+'</div>':'')+
       '</div>';
     // AI button attached via JS to avoid quote escaping
@@ -611,7 +648,6 @@ function testAudio(){playChime(false);if(gs('vib')&&navigator.vibrate)navigator.
 
 // Alert UI
 function triggerAlert(areas,type,key){
-  sendAlertNotif(areas,type);
   if(key===lastKey)return;lastKey=key;alertOn=true;
   const str=Array.isArray(areas)?areas.map(a=>safeText(a)).join(' · '):safeText(String(areas));
   document.getElementById('bar-areas').textContent=str;
@@ -623,8 +659,8 @@ function triggerAlert(areas,type,key){
   document.getElementById('ovl').classList.add('on');
   playAlarm();
   if(gs('vib')&&navigator.vibrate)navigator.vibrate([500,150,500,150,500,150,500]);
-  if('Notification'in window&&Notification.permission==='granted')
-    new Notification('🚨 '+type,{body:str,icon:'/icon-192.png',requireInteraction:true});
+  // Send local notification (respects pushAlerts toggle, defaults to true)
+  sendAlertNotif(areas,type);
   histItems.unshift({data:Array.isArray(areas)?areas:[areas],title:type,alertDate:new Date().toISOString()});
   if(histItems.length>20)histItems.length=20;
   apSetAlert({data:Array.isArray(areas)?areas:[areas],title:type});
@@ -1138,7 +1174,7 @@ connectStream();
 pollOnce();
 
 // ── AUTO-UPDATE ENGINE v3 — zero user interaction ──
-const CLIENT_VERSION = '32';
+const CLIENT_VERSION = '33';
 
 (function initAutoUpdate(){
   if(!('serviceWorker' in navigator) || location.hostname.includes('claude')) return;

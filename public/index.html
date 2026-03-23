@@ -38,6 +38,9 @@
 <!-- SHARE SHEET -->
 <div id="share-overlay" onclick="closeShare(event)"><div id="share-sheet"><div class="share-handle"></div><div class="share-title">שתף כתבה</div><div class="share-grid"><a class="share-opt" id="sh-wa" href="#" target="_blank" rel="noopener"><span class="share-opt-ico">💬</span><span class="share-opt-lbl">WhatsApp</span></a><a class="share-opt" id="sh-tg" href="#" target="_blank" rel="noopener"><span class="share-opt-ico">✈️</span><span class="share-opt-lbl">Telegram</span></a><button class="share-opt" id="sh-copy"><span class="share-opt-ico">🔗</span><span class="share-opt-lbl" id="sh-copy-lbl">העתק קישור</span></button><button class="share-opt" id="sh-native"><span class="share-opt-ico">⬆️</span><span class="share-opt-lbl">שתף...</span></button></div><button class="share-cancel" onclick="closeShare()">ביטול</button></div></div>
 
+<!-- OFFLINE INDICATOR -->
+<div id="offline-bar" class="offline-bar">⚡ אין חיבור לאינטרנט — מציג תוכן שמור</div>
+
 <!-- HEADER -->
 <div id="hdr">
   <div class="h-top">
@@ -248,7 +251,13 @@
       <div class="s-link-row"><div><div class="s-main">קבוצת WhatsApp</div><div class="s-sub">עדכונים בזמן אמת</div></div><a href="https://chat.whatsapp.com/GnpGSBF4V5gKZUDXlRmtDQ?mode=gi_t" target="_blank" style="font-size:20px">💬</a></div>
     </div>
 
-    <div class="s-footer">חדשות IL · v32<br>ynet · וואלה · כאן 11 · חדשות 12 · רשת 13 · ערוץ 14<br>מאקו · מעריב · הארץ · גלובס · כלכליסט · דובר צבא · גלצ</div>
+    <div class="s-lbl">חיבור ומצב</div>
+    <div class="s-card">
+      <div class="s-row"><div class="s-left"><span class="s-ico">📡</span><div><div class="s-main">מצב חיבור</div><div class="s-sub" id="connStatus">בודק...</div></div></div><div id="connDot" style="width:10px;height:10px;border-radius:50%;background:var(--t3);flex-shrink:0"></div></div>
+      <div class="s-row"><div class="s-left"><span class="s-ico">🔒</span><div><div class="s-main">אבטחה</div><div class="s-sub">CSP + HSTS מופעלים</div></div></div><div style="font-size:11px;color:var(--green);font-weight:700">מוגן ✓</div></div>
+    </div>
+
+    <div class="s-footer">חדשות IL · v33<br>ynet · וואלה · כאן 11 · חדשות 12 · רשת 13 · ערוץ 14<br>מאקו · מעריב · הארץ · גלובס · כלכליסט · דובר צבא · גלצ</div>
   </div>
 </div>
 

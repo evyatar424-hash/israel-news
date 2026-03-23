@@ -1,4 +1,4 @@
-const APP_VERSION = '32';
+const APP_VERSION = '33';
 const CACHE = 'hdshot-il-v' + APP_VERSION;
 const ASSETS = ['/', '/index.html', '/css/app.css', '/js/app.js', '/manifest.json', '/icon-192.png', '/icon-512.png'];
 
