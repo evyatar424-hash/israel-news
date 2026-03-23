@@ -8,7 +8,7 @@ const compression = require('compression');
 // ══════════════════════════════════════════════
 // CONFIG & ENVIRONMENT
 // ══════════════════════════════════════════════
-const APP_VERSION = '32';
+const APP_VERSION = '33';
 const PORT = process.env.PORT || 3000;
 
 const VAPID_PUBLIC_KEY  = process.env.VAPID_PUBLIC_KEY  || '';
@@ -224,8 +224,14 @@ const app = express();
 // Gzip compression
 app.use(compression());
 
-// CORS
-app.use(cors());
+// CORS — restrict to known origins
+const ALLOWED_ORIGINS = [APP_URL, 'https://briefil.co.il', 'https://www.briefil.co.il'].filter(Boolean);
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.some(o => origin === o || origin.startsWith(o))) return cb(null, true);
+    cb(null, false);
+  }
+}));
 
 // JSON body parser with size limit
 app.use(express.json({ limit: '16kb' }));
@@ -235,6 +241,11 @@ app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'SAMEORIGIN');
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader('Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://www.oref.org.il https://api.tzevaadom.co.il https://www.google-analytics.com https://www.googletagmanager.com; frame-src https://www.kan.org.il https://www.mako.co.il https://13tv.co.il https://www.now14.co.il");
   next();
 });
 
@@ -690,11 +701,16 @@ const ALLOWED_IMAGE_HOSTS = new Set([
 
 function isAllowedImageHost(url) {
   try {
-    const hostname = new URL(url).hostname;
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    const hostname = parsed.hostname;
     if (ALLOWED_IMAGE_HOSTS.has(hostname)) return true;
-    // Allow subdomains of allowed hosts
-    for (const h of ALLOWED_IMAGE_HOSTS) {
-      if (hostname.endsWith('.' + h)) return true;
+    // Allow direct subdomains of allowed hosts (e.g. img.ynet.co.il for ynet.co.il)
+    // but verify the parent domain is exactly in the allowlist
+    const parts = hostname.split('.');
+    for (let i = 1; i < parts.length; i++) {
+      const parent = parts.slice(i).join('.');
+      if (ALLOWED_IMAGE_HOSTS.has(parent)) return true;
     }
     return false;
   } catch (e) { return false; }
@@ -1195,7 +1211,7 @@ app.get('/api/drugs/status', rateLimitMiddleware(), (req, res) => {
 
 app.post('/api/drugs/search', rateLimitMiddleware(3), async (req, res) => {
   if (!ADMIN_SECRET) return res.status(503).json({ ok: false, msg: 'Admin endpoint not configured' });
-  const secret = req.headers['x-secret'] || req.body?.secret;
+  const secret = req.headers['x-secret'];
   if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, msg: 'Unauthorized' });
   const newFound = await runDrugSearch().catch(e => { console.error('[DRUG]', e); return -1; });
   res.json({ ok: true, newFound });
@@ -1203,7 +1219,7 @@ app.post('/api/drugs/search', rateLimitMiddleware(3), async (req, res) => {
 
 app.post('/api/drugs/reset', rateLimitMiddleware(3), async (req, res) => {
   if (!ADMIN_SECRET) return res.status(503).json({ ok: false, msg: 'Admin endpoint not configured' });
-  const secret = req.headers['x-secret'] || req.body?.secret;
+  const secret = req.headers['x-secret'];
   if (secret !== ADMIN_SECRET) return res.status(403).json({ ok: false, msg: 'Unauthorized' });
   const { id } = req.body || {};
   if (id) {
@@ -1217,7 +1233,7 @@ app.post('/api/drugs/reset', rateLimitMiddleware(3), async (req, res) => {
 
 app.post('/api/push/daily-summary', rateLimitMiddleware(3), async (req, res) => {
   if (!ADMIN_SECRET) return res.status(503).json({ ok: false, msg: 'Admin endpoint not configured' });
-  const secret = req.headers['x-secret'] || req.body?.secret;
+  const secret = req.headers['x-secret'];
   if (secret !== ADMIN_SECRET) {
     return res.status(403).json({ ok: false, msg: 'Unauthorized' });
   }
@@ -1441,7 +1457,7 @@ app.listen(PORT, async () => {
 
   // Start Oref polling
   pollOref();
-  setInterval(pollOref, 15_000);
+  setInterval(pollOref, 3_000);
 
   // Start daily drug search at 07:00
   scheduleDrugSearch();
