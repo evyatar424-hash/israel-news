@@ -900,10 +900,10 @@ async function pollOref() {
     orefAlertClearTimer = setTimeout(() => {
       if (currentAlert) {
         currentAlert = null;
-        lastOrefAlertId = null;
+        // Do NOT reset lastOrefAlertId — prevents re-triggering same ongoing alert
         broadcastSSE({ alert: null, connected: true });
       }
-    }, 120_000);
+    }, 300_000); // 5 minutes — real attacks can last longer than 2 min
   } catch (e) {
     if (orefConnected) {
       orefConnected = false;
